@@ -1,6 +1,6 @@
 'use client'
 
-import { Card, CardBody, CardFooter, Image, Chip } from '@heroui/react'
+import { Card, CardBody, CardFooter, Image, Chip, Button } from '@heroui/react'
 
 interface Dish {
   _id: string
@@ -18,9 +18,11 @@ interface Dish {
 
 interface DishCardProps {
   dish: Dish
+  onAddToCart?: () => void
+  showAddButton?: boolean
 }
 
-export function DishCard({ dish }: DishCardProps) {
+export function DishCard({ dish, onAddToCart, showAddButton = false }: DishCardProps) {
   return (
     <Card className="max-w-md hover:scale-105 transition-transform duration-200">
       <CardBody className="p-0">
@@ -81,8 +83,17 @@ export function DishCard({ dish }: DishCardProps) {
           <p className="text-sm font-medium text-gray-700">{dish.restaurant.name}</p>
           <p className="text-xs text-gray-500">{dish.restaurant.address}</p>
         </div>
-        <div className="text-right">
+        <div className="flex items-center gap-2">
           <p className="text-lg font-bold text-primary">{dish.price.toFixed(2)}€</p>
+          {showAddButton && onAddToCart && (
+            <Button 
+              color="primary" 
+              size="sm"
+              onPress={onAddToCart}
+            >
+              Añadir
+            </Button>
+          )}
         </div>
       </CardFooter>
     </Card>

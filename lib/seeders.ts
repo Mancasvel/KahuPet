@@ -10,6 +10,8 @@ export const restaurantData = [
     cuisine: ["italiana", "mediterránea"],
     rating: 4.5,
     priceRange: "€€",
+    deliveryTime: "25-35 min",
+    minOrder: 15.00,
     dishes: [
       {
         _id: "dish_001",
@@ -21,7 +23,8 @@ export const restaurantData = [
         category: "pasta",
         image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=500&h=300&fit=crop",
         cookingTime: 15,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "individual"
       },
       {
         _id: "dish_002",
@@ -33,7 +36,8 @@ export const restaurantData = [
         category: "arroz",
         image: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=500&h=300&fit=crop",
         cookingTime: 25,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "individual"
       },
       {
         _id: "dish_003",
@@ -45,7 +49,34 @@ export const restaurantData = [
         category: "pizza",
         image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=500&h=300&fit=crop",
         cookingTime: 12,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_015",
+        name: "Lasaña de la Casa",
+        description: "Tradicional lasaña con carne, bechamel y queso gratinado",
+        ingredients: ["pasta", "carne picada", "bechamel", "tomate", "queso", "hierbas"],
+        tags: ["con carne", "italiano", "tradicional", "sustancioso"],
+        price: 14.50,
+        category: "pasta",
+        image: "https://images.unsplash.com/photo-1574894709920-11b28e7367e3?w=500&h=300&fit=crop",
+        cookingTime: 20,
+        spicyLevel: 0,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_016",
+        name: "Tiramisu Casero",
+        description: "Postre tradicional italiano con mascarpone y café",
+        ingredients: ["mascarpone", "café", "cacao", "bizcochos", "huevos", "azúcar"],
+        tags: ["postre", "italiano", "dulce", "casero"],
+        price: 6.50,
+        category: "postre",
+        image: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=500&h=300&fit=crop",
+        cookingTime: 5,
+        spicyLevel: 0,
+        portionSize: "individual"
       }
     ]
   },
@@ -58,6 +89,8 @@ export const restaurantData = [
     cuisine: ["española", "tapas"],
     rating: 4.7,
     priceRange: "€€€",
+    deliveryTime: "30-40 min",
+    minOrder: 20.00,
     dishes: [
       {
         _id: "dish_004",
@@ -69,7 +102,8 @@ export const restaurantData = [
         category: "arroz",
         image: "https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=500&h=300&fit=crop",
         cookingTime: 35,
-        spicyLevel: 1
+        spicyLevel: 1,
+        portionSize: "compartir"
       },
       {
         _id: "dish_005",
@@ -81,7 +115,8 @@ export const restaurantData = [
         category: "entrante",
         image: "https://images.unsplash.com/photo-1549611012-bc962e443705?w=500&h=300&fit=crop",
         cookingTime: 5,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "compartir"
       },
       {
         _id: "dish_006",
@@ -93,7 +128,47 @@ export const restaurantData = [
         category: "sopa",
         image: "https://images.unsplash.com/photo-1571069492352-34edd3b8b8da?w=500&h=300&fit=crop",
         cookingTime: 10,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_017",
+        name: "Pulpo a la Gallega",
+        description: "Pulpo cocido con pimentón dulce y aceite de oliva",
+        ingredients: ["pulpo", "patatas", "pimentón", "aceite de oliva", "sal gorda"],
+        tags: ["española", "marisco", "tradicional", "sin gluten"],
+        price: 16.50,
+        category: "marisco",
+        image: "https://images.unsplash.com/photo-1559847844-d721426d6edc?w=500&h=300&fit=crop",
+        cookingTime: 15,
+        spicyLevel: 1,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_018",
+        name: "Tortilla Española",
+        description: "Tradicional tortilla de patatas con cebolla",
+        ingredients: ["huevos", "patatas", "cebolla", "aceite de oliva", "sal"],
+        tags: ["vegetariano", "española", "tradicional", "casero"],
+        price: 9.00,
+        category: "entrante",
+        image: "https://images.unsplash.com/photo-1506280754576-f6fa8a873550?w=500&h=300&fit=crop",
+        cookingTime: 12,
+        spicyLevel: 0,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_019",
+        name: "Flan de la Abuela",
+        description: "Postre tradicional español con caramelo casero",
+        ingredients: ["huevos", "leche", "azúcar", "vainilla"],
+        tags: ["postre", "española", "tradicional", "dulce"],
+        price: 5.50,
+        category: "postre",
+        image: "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=500&h=300&fit=crop",
+        cookingTime: 5,
+        spicyLevel: 0,
+        portionSize: "individual"
       }
     ]
   },
@@ -106,6 +181,8 @@ export const restaurantData = [
     cuisine: ["japonesa", "sushi"],
     rating: 4.8,
     priceRange: "€€€€",
+    deliveryTime: "20-30 min",
+    minOrder: 25.00,
     dishes: [
       {
         _id: "dish_007",
@@ -117,7 +194,8 @@ export const restaurantData = [
         category: "sashimi",
         image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=500&h=300&fit=crop",
         cookingTime: 8,
-        spicyLevel: 1
+        spicyLevel: 1,
+        portionSize: "individual"
       },
       {
         _id: "dish_008",
@@ -129,7 +207,8 @@ export const restaurantData = [
         category: "ramen",
         image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=500&h=300&fit=crop",
         cookingTime: 20,
-        spicyLevel: 2
+        spicyLevel: 2,
+        portionSize: "individual"
       },
       {
         _id: "dish_009",
@@ -141,7 +220,47 @@ export const restaurantData = [
         category: "maki",
         image: "https://images.unsplash.com/photo-1553621042-f6e147245754?w=500&h=300&fit=crop",
         cookingTime: 12,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_020",
+        name: "Tempura de Verduras",
+        description: "Verduras rebozadas en tempura ligera y crujiente",
+        ingredients: ["calabacín", "berenjena", "pimiento", "tempura", "salsa tentsuyu"],
+        tags: ["vegetariano", "japonés", "crujiente", "ligero"],
+        price: 13.50,
+        category: "tempura",
+        image: "https://images.unsplash.com/photo-1562158147-cf176caa4217?w=500&h=300&fit=crop",
+        cookingTime: 15,
+        spicyLevel: 0,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_021",
+        name: "Nigiri Premium",
+        description: "Selección de nigiri con los mejores pescados",
+        ingredients: ["salmón", "atún", "langostino", "anguila", "arroz sushi"],
+        tags: ["japonés", "premium", "crudo", "tradicional"],
+        price: 28.00,
+        category: "nigiri",
+        image: "https://images.unsplash.com/photo-1553909489-cd47e0ef937f?w=500&h=300&fit=crop",
+        cookingTime: 10,
+        spicyLevel: 0,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_022",
+        name: "Mochi de Té Verde",
+        description: "Postre japonés tradicional relleno de helado",
+        ingredients: ["mochi", "helado té verde", "azúcar", "almidón"],
+        tags: ["postre", "japonés", "dulce", "frío"],
+        price: 7.00,
+        category: "postre",
+        image: "https://images.unsplash.com/photo-1563379091109-46e78589a88e?w=500&h=300&fit=crop",
+        cookingTime: 3,
+        spicyLevel: 0,
+        portionSize: "individual"
       }
     ]
   },
@@ -154,6 +273,8 @@ export const restaurantData = [
     cuisine: ["vegana", "saludable"],
     rating: 4.3,
     priceRange: "€€",
+    deliveryTime: "20-25 min",
+    minOrder: 12.00,
     dishes: [
       {
         _id: "dish_010",
@@ -165,7 +286,8 @@ export const restaurantData = [
         category: "bowl",
         image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&h=300&fit=crop",
         cookingTime: 10,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "individual"
       },
       {
         _id: "dish_011",
@@ -177,7 +299,34 @@ export const restaurantData = [
         category: "hamburguesa",
         image: "https://images.unsplash.com/photo-1520072959219-c595dc870360?w=500&h=300&fit=crop",
         cookingTime: 15,
-        spicyLevel: 0
+        spicyLevel: 0,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_023",
+        name: "Smoothie Bowl Tropical",
+        description: "Bowl de açaí con frutas tropicales y granola",
+        ingredients: ["açaí", "mango", "piña", "coco", "granola", "chía"],
+        tags: ["vegano", "desayuno", "fresco", "antioxidante", "superfood"],
+        price: 9.50,
+        category: "bowl",
+        image: "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?w=500&h=300&fit=crop",
+        cookingTime: 8,
+        spicyLevel: 0,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_024",
+        name: "Curry Verde de Verduras",
+        description: "Curry tailandés con leche de coco y verduras frescas",
+        ingredients: ["leche de coco", "curry verde", "calabacín", "berenjena", "pimiento", "albahaca"],
+        tags: ["vegano", "picante", "asiático", "aromático"],
+        price: 14.00,
+        category: "curry",
+        image: "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?w=500&h=300&fit=crop",
+        cookingTime: 18,
+        spicyLevel: 3,
+        portionSize: "individual"
       }
     ]
   },
@@ -190,6 +339,8 @@ export const restaurantData = [
     cuisine: ["india", "especiada"],
     rating: 4.6,
     priceRange: "€€",
+    deliveryTime: "25-35 min",
+    minOrder: 18.00,
     dishes: [
       {
         _id: "dish_012",
@@ -201,7 +352,8 @@ export const restaurantData = [
         category: "curry",
         image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&h=300&fit=crop",
         cookingTime: 25,
-        spicyLevel: 3
+        spicyLevel: 3,
+        portionSize: "individual"
       },
       {
         _id: "dish_013",
@@ -213,7 +365,8 @@ export const restaurantData = [
         category: "curry",
         image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&h=300&fit=crop",
         cookingTime: 20,
-        spicyLevel: 2
+        spicyLevel: 2,
+        portionSize: "individual"
       },
       {
         _id: "dish_014",
@@ -225,7 +378,166 @@ export const restaurantData = [
         category: "pan",
         image: "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&h=300&fit=crop",
         cookingTime: 8,
-        spicyLevel: 1
+        spicyLevel: 1,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_025",
+        name: "Biryani de Cordero",
+        description: "Arroz basmati con cordero y especias aromáticas",
+        ingredients: ["arroz basmati", "cordero", "azafrán", "canela", "cardamomo", "cebolla frita"],
+        tags: ["indio", "con carne", "aromático", "festivo"],
+        price: 18.50,
+        category: "arroz",
+        image: "https://images.unsplash.com/photo-1563379091109-46e78589a88e?w=500&h=300&fit=crop",
+        cookingTime: 30,
+        spicyLevel: 2,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_026",
+        name: "Samosas Vegetales",
+        description: "Empanadillas crujientes rellenas de verduras especiadas",
+        ingredients: ["masa", "patatas", "guisantes", "especias", "cilantro"],
+        tags: ["vegetariano", "indio", "entrante", "crujiente"],
+        price: 7.50,
+        category: "entrante",
+        image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&h=300&fit=crop",
+        cookingTime: 12,
+        spicyLevel: 2,
+        portionSize: "compartir"
+      }
+    ]
+  },
+  {
+    _id: "rest_006",
+    name: "Burger & Co",
+    description: "Hamburguesas gourmet y comida americana",
+    address: "Calle de Fuencarral 89, Madrid",
+    phone: "+34 91 678 9012",
+    cuisine: ["americana", "hamburguesas"],
+    rating: 4.2,
+    priceRange: "€€",
+    deliveryTime: "15-25 min",
+    minOrder: 10.00,
+    dishes: [
+      {
+        _id: "dish_027",
+        name: "Burger Clásica",
+        description: "Hamburguesa de ternera con queso, lechuga y tomate",
+        ingredients: ["carne de ternera", "queso cheddar", "lechuga", "tomate", "cebolla", "pan brioche"],
+        tags: ["americana", "con carne", "clásico", "popular"],
+        price: 12.50,
+        category: "hamburguesa",
+        image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=300&fit=crop",
+        cookingTime: 12,
+        spicyLevel: 0,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_028",
+        name: "Alitas BBQ",
+        description: "Alitas de pollo con salsa barbacoa casera",
+        ingredients: ["alitas de pollo", "salsa bbq", "especias", "miel"],
+        tags: ["americana", "con carne", "picante", "para compartir"],
+        price: 9.50,
+        category: "entrante",
+        image: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=500&h=300&fit=crop",
+        cookingTime: 18,
+        spicyLevel: 2,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_029",
+        name: "Patatas Fritas Loaded",
+        description: "Patatas fritas con queso, bacon y jalapeños",
+        ingredients: ["patatas", "queso cheddar", "bacon", "jalapeños", "cebollino"],
+        tags: ["americana", "con carne", "para compartir", "indulgente"],
+        price: 8.50,
+        category: "acompañamiento",
+        image: "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=500&h=300&fit=crop",
+        cookingTime: 10,
+        spicyLevel: 1,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_030",
+        name: "Milkshake de Oreo",
+        description: "Batido cremoso con galletas Oreo",
+        ingredients: ["helado vainilla", "leche", "galletas oreo", "nata"],
+        tags: ["bebida", "dulce", "frío", "popular"],
+        price: 5.50,
+        category: "bebida",
+        image: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&h=300&fit=crop",
+        cookingTime: 5,
+        spicyLevel: 0,
+        portionSize: "individual"
+      }
+    ]
+  },
+  {
+    _id: "rest_007",
+    name: "Taco Libre",
+    description: "Auténtica comida mexicana con sabores picantes",
+    address: "Calle de la Cruz 34, Madrid",
+    phone: "+34 91 543 2109",
+    cuisine: ["mexicana", "picante"],
+    rating: 4.4,
+    priceRange: "€€",
+    deliveryTime: "20-30 min",
+    minOrder: 15.00,
+    dishes: [
+      {
+        _id: "dish_031",
+        name: "Tacos al Pastor",
+        description: "Tacos tradicionales con carne de cerdo marinada",
+        ingredients: ["tortilla maíz", "cerdo", "piña", "cebolla", "cilantro", "salsa verde"],
+        tags: ["mexicana", "con carne", "picante", "tradicional"],
+        price: 11.50,
+        category: "tacos",
+        image: "https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=500&h=300&fit=crop",
+        cookingTime: 15,
+        spicyLevel: 3,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_032",
+        name: "Guacamole con Nachos",
+        description: "Guacamole fresco con nachos de maíz caseros",
+        ingredients: ["aguacate", "tomate", "cebolla", "limón", "cilantro", "nachos"],
+        tags: ["vegetariano", "mexicana", "entrante", "fresco"],
+        price: 8.00,
+        category: "entrante",
+        image: "https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=500&h=300&fit=crop",
+        cookingTime: 8,
+        spicyLevel: 1,
+        portionSize: "compartir"
+      },
+      {
+        _id: "dish_033",
+        name: "Quesadilla de Pollo",
+        description: "Quesadilla grande con pollo y queso derretido",
+        ingredients: ["tortilla harina", "pollo", "queso mexicano", "pimientos", "cebolla"],
+        tags: ["mexicana", "con carne", "queso", "sustancioso"],
+        price: 13.00,
+        category: "quesadilla",
+        image: "https://images.unsplash.com/photo-1565299585323-38174c4a6c18?w=500&h=300&fit=crop",
+        cookingTime: 12,
+        spicyLevel: 2,
+        portionSize: "individual"
+      },
+      {
+        _id: "dish_034",
+        name: "Churros con Dulce de Leche",
+        description: "Churros caseros con dulce de leche argentino",
+        ingredients: ["harina", "azúcar", "canela", "dulce de leche"],
+        tags: ["postre", "dulce", "casero", "caliente"],
+        price: 6.50,
+        category: "postre",
+        image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500&h=300&fit=crop",
+        cookingTime: 10,
+        spicyLevel: 0,
+        portionSize: "compartir"
       }
     ]
   }

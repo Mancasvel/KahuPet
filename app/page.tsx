@@ -1,206 +1,372 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardBody, Input, Button, Spinner } from '@heroui/react'
-import { DishCard } from '@/components/DishCard'
-import { SearchIcon } from '@/components/SearchIcon'
+import { useState, useCallback } from 'react'
+import { Input, Button, Card, CardBody, Divider, Spinner, Badge } from '@heroui/react'
+import { RestaurantCard } from '@/components/RestaurantCard'
+import { CartComponent } from '@/components/CartComponent'
+import { DynamicMenuCard } from '@/components/DynamicMenuCard'
+import { NavbarComponent } from '@/components/Navbar'
+import { Footer } from '@/components/Footer'
 
-interface Dish {
+interface CartItem {
+  id: string
+  name: string
+  price: number
+  quantity: number
+  type: 'dish' | 'menu'
+  restaurantId: string
+  restaurantName: string
+}
+
+interface Restaurant {
   _id: string
   name: string
   description: string
-  ingredients: string[]
-  tags: string[]
-  price: number
-  image: string
-  restaurant: {
-    name: string
-    address: string
-  }
+  address: string
+  phone: string
+  cuisine: string[]
+  rating: number
+  priceRange: string
+  deliveryTime: string
+  minOrder: number
+  dishes: any[]
+  groupMenus?: any[]
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [dishes, setDishes] = useState<Dish[]>([])
-  const [loading, setLoading] = useState(false)
-  const [hasSearched, setHasSearched] = useState(false)
-  const [usedMCP, setUsedMCP] = useState(false)
-  const [searchSummary, setSearchSummary] = useState('')
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+  const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [summary, setSummary] = useState('')
+  const [isMCPMode, setIsMCPMode] = useState(false)
+  const [cartItems, setCartItems] = useState<CartItem[]>([])
+  const [groupSuggestion, setGroupSuggestion] = useState<any>(null)
+  const [dynamicMenu, setDynamicMenu] = useState<any[]>([])
 
-  const handleSearch = async () => {
-    if (!query.trim()) return
+  // Cargar todos los restaurantes al inicio
+  const loadAllRestaurants = useCallback(async () => {
+    try {
+      const response = await fetch('/api/restaurants')
+      if (response.ok) {
+        const data = await response.json()
+        setAllRestaurants(data)
+        setRestaurants(data)
+      }
+    } catch (error) {
+      console.error('Error cargando restaurantes:', error)
+    }
+  }, [])
 
-    setLoading(true)
-    setHasSearched(true)
+  // Cargar restaurantes al montar el componente
+  useState(() => {
+    loadAllRestaurants()
+  })
+
+  const searchDishes = async () => {
+    if (!query.trim()) {
+      setRestaurants(allRestaurants)
+      setSummary('')
+      setGroupSuggestion(null)
+      return
+    }
+
+    setIsLoading(true)
+    setSummary('')
+    setGroupSuggestion(null)
+    setDynamicMenu([])
     
     try {
-      // Intentar primero con el endpoint MCP
-      let response = await fetch('/api/mcp-parse', {
+      // Intentar primero con MCP (LLM + Base de datos)
+      const mcpResponse = await fetch('/api/mcp-parse', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ query }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
       })
 
-      // Si falla, usar el endpoint original como fallback
-      if (!response.ok) {
-        console.log('MCP endpoint falló, usando fallback...')
-        response = await fetch('/api/parse', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query }),
-        })
+      if (mcpResponse.ok) {
+        const mcpData = await mcpResponse.json()
+        
+        setIsMCPMode(true)
+        setSummary(mcpData.summary || `Resultados para: "${query}"`)
+        setGroupSuggestion(mcpData.groupSuggestion)
+        setDynamicMenu(mcpData.dynamicMenu || [])
+
+        // Si hay restaurantes específicos recomendados, usarlos
+        if (mcpData.restaurants && mcpData.restaurants.length > 0) {
+          setRestaurants(mcpData.restaurants)
+        } else {
+          // Filtrar restaurantes que tengan platos recomendados
+          const dishRestaurantIds = new Set(mcpData.dishes?.map((dish: any) => dish.restaurant._id) || [])
+          const filteredRestaurants = allRestaurants.filter(restaurant => 
+            dishRestaurantIds.has(restaurant._id)
+          )
+          setRestaurants(filteredRestaurants.length > 0 ? filteredRestaurants : allRestaurants)
+        }
+        
+        return
       }
+
+      // Fallback al modo demo
+      console.log('MCP falló, usando modo demo')
+      setIsMCPMode(false)
+      
+      const response = await fetch('/api/parse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      })
 
       if (response.ok) {
         const data = await response.json()
-        setDishes(data.dishes || [])
-        setUsedMCP(data.mcp || false)
-        setSearchSummary(data.summary || '')
+        setSummary(`🧪 Modo Demo - ${data.summary || `Resultados para: "${query}"`}`)
         
-        // Mostrar mensaje si necesita configuración
-        if (data.needsConfig) {
-          alert(data.error + '\n\nRevisa las instrucciones en el README para configurar las variables de entorno.')
-        }
-
-        // Log para debugging
-        console.log('🎯 Respuesta:', {
-          total: data.total,
-          mcp: data.mcp,
-          summary: data.summary
-        })
-      } else {
-        console.error('Error en la búsqueda')
-        alert('Error en la búsqueda. Verifica que el servidor esté funcionando.')
+        // Filtrar restaurantes basado en platos encontrados
+        const dishRestaurantIds = new Set(data.dishes?.map((dish: any) => dish.restaurant._id) || [])
+        const filteredRestaurants = allRestaurants.filter(restaurant => 
+          dishRestaurantIds.has(restaurant._id)
+        )
+        setRestaurants(filteredRestaurants.length > 0 ? filteredRestaurants : allRestaurants)
       }
     } catch (error) {
-      console.error('Error:', error)
-      alert('Error de conexión. Verifica que el servidor esté funcionando.')
+      console.error('Error en búsqueda:', error)
+      setSummary('Error en la búsqueda. Mostrando todos los restaurantes.')
+      setRestaurants(allRestaurants)
+      setIsMCPMode(false)
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
+  }
+
+  const handleAddToCart = (item: CartItem) => {
+    setCartItems(prevItems => {
+      const existingItem = prevItems.find(i => i.id === item.id && i.restaurantId === item.restaurantId)
+      
+      if (existingItem) {
+        return prevItems.map(i => 
+          i.id === item.id && i.restaurantId === item.restaurantId
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
+        )
+      } else {
+        return [...prevItems, item]
+      }
+    })
+  }
+
+  const handleUpdateQuantity = (id: string, quantity: number) => {
+    if (quantity <= 0) {
+      setCartItems(prevItems => prevItems.filter(item => item.id !== id))
+    } else {
+      setCartItems(prevItems => 
+        prevItems.map(item => 
+          item.id === id ? { ...item, quantity } : item
+        )
+      )
+    }
+  }
+
+  const handleRemoveItem = (id: string) => {
+    setCartItems(prevItems => prevItems.filter(item => item.id !== id))
+  }
+
+  const handleClearCart = () => {
+    setCartItems([])
+  }
+
+  const handleAddMenuToCart = (dishes: any[]) => {
+    dishes.forEach(dish => {
+      handleAddToCart({
+        id: dish._id,
+        name: dish.name,
+        price: dish.price,
+        quantity: 1,
+        type: 'dish',
+        restaurantId: dish.restaurant._id,
+        restaurantName: dish.restaurant.name
+      })
+    })
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSearch()
+      searchDishes()
     }
   }
 
+  const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center py-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
-            Komi
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Describe lo que te apetece y encuentra el plato perfecto
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
+      {/* Navbar */}
+      <NavbarComponent cartItemsCount={totalCartItems} />
+      
+      <div className="container mx-auto px-4 py-8">
+        {/* Header mejorado */}
+        <div className="text-center mb-12">
+          <div className="relative">
+            <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-orange-600 via-red-500 to-pink-500 bg-clip-text text-transparent mb-6">
+              🍽️ Komi
+            </h1>
+            <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
+            <div className="absolute -bottom-2 -left-2 text-2xl animate-pulse">🌟</div>
+          </div>
+          <p className="text-xl text-gray-700 mb-4 font-medium">
+            Descubre los mejores restaurantes y crea menús perfectos
+          </p>
+          <p className="text-sm text-gray-500 max-w-2xl mx-auto">
+            Nuestra IA inteligente analiza tus preferencias y crea menús personalizados para cualquier ocasión. 
+            ¡Solo dinos qué quieres y nosotros nos encargamos del resto!
           </p>
         </div>
 
-        {/* Search Interface */}
-        <Card className="mb-8 shadow-lg">
-          <CardBody className="p-6">
-            <div className="flex gap-4">
-              <Input
-                placeholder="Ej: Quiero algo vegano con arroz, que sea rápido y sin picante"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyPress={handleKeyPress}
-                size="lg"
-                startContent={<SearchIcon />}
-                className="flex-1"
-              />
-              <Button
-                color="primary"
-                size="lg"
-                onClick={handleSearch}
-                isLoading={loading}
-                className="px-8"
-              >
-                {loading ? <Spinner size="sm" color="white" /> : 'Buscar'}
-              </Button>
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Área principal */}
+          <div className="flex-1">
+            {/* Barra de búsqueda mejorada */}
+            <div className="mb-8">
+              <div className="max-w-4xl mx-auto">
+                <div className="bg-white rounded-2xl shadow-xl p-6 border border-orange-200">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <Input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="¿Qué te apetece comer hoy? Ej: 'somos 3 personas y queremos comida italiana', 'quiero algo vegano y barato', 'sushi para 2'"
+                      size="lg"
+                      className="flex-1"
+                      startContent={<span className="text-xl">🔍</span>}
+                      classNames={{
+                        input: "text-lg",
+                        inputWrapper: "bg-gray-50 border-2 border-gray-200 hover:border-orange-300 focus-within:border-orange-500"
+                      }}
+                    />
+                    <Button 
+                      color="primary" 
+                      size="lg"
+                      onPress={searchDishes}
+                      isDisabled={isLoading}
+                      className="bg-gradient-to-r from-orange-500 to-red-500 font-semibold text-white min-w-32 shadow-lg hover:shadow-xl transition-all"
+                    >
+                      {isLoading ? <Spinner size="sm" color="white" /> : '🚀 Buscar'}
+                    </Button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                    <span className="text-xs text-gray-500">Ejemplos populares:</span>
+                    <Button 
+                      size="sm" 
+                      variant="flat" 
+                      className="text-xs h-6 hover:bg-orange-100" 
+                      onPress={() => setQuery("somos 4 y queremos pizza")}
+                    >
+                      somos 4 y queremos pizza
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="flat" 
+                      className="text-xs h-6 hover:bg-orange-100" 
+                      onPress={() => setQuery("comida vegana para 2")}
+                    >
+                      comida vegana para 2
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="flat" 
+                      className="text-xs h-6 hover:bg-orange-100" 
+                      onPress={() => setQuery("algo barato y rápido")}
+                    >
+                      algo barato y rápido
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </CardBody>
-        </Card>
 
-        {/* Results */}
-        {loading && (
-          <div className="text-center py-12">
-            <Spinner size="lg" color="primary" />
-            <p className="mt-4 text-gray-600">Buscando platos perfectos para ti...</p>
-          </div>
-        )}
+            {/* Estado de conexión y resumen */}
+            {(summary || isLoading) && (
+              <Card className="mb-6">
+                <CardBody>
+                  <div className="flex items-center gap-2">
+                    {isMCPMode ? (
+                      <Badge color="success" variant="flat">🤖 IA + Base de Datos</Badge>
+                    ) : (
+                      <Badge color="warning" variant="flat">🧪 Modo Demo</Badge>
+                    )}
+                    <span className="text-gray-700">
+                      {isLoading ? 'Buscando los mejores restaurantes...' : summary}
+                    </span>
+                  </div>
+                  
 
-        {hasSearched && !loading && dishes.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-600 text-lg">
-              No encontramos platos que coincidan con tu búsqueda. 
-              Intenta con una descripción diferente.
-            </p>
-          </div>
-        )}
+                </CardBody>
+              </Card>
+            )}
 
-        {dishes.length > 0 && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-800">
-                  Platos recomendados para ti
-                </h2>
-                {searchSummary && (
-                  <p className="text-gray-600 mt-1">{searchSummary}</p>
+            {/* Menú dinámico generado por IA */}
+            {dynamicMenu.length > 0 && groupSuggestion && (
+              <div className="mb-6">
+                <DynamicMenuCard
+                  dishes={dynamicMenu}
+                  groupSuggestion={groupSuggestion}
+                  onAddAllToCart={() => handleAddMenuToCart(dynamicMenu)}
+                />
+              </div>
+            )}
+
+            {/* Lista de restaurantes */}
+            {isLoading ? (
+              <div className="text-center py-12">
+                <Spinner size="lg" />
+                <p className="mt-4 text-gray-600">Analizando tu solicitud...</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {restaurants.length === 0 ? (
+                  <Card>
+                    <CardBody className="text-center py-12">
+                      <div className="text-6xl mb-4">🔍</div>
+                      <h3 className="text-xl font-semibold mb-2">No se encontraron restaurantes</h3>
+                      <p className="text-gray-600">
+                        Intenta con una búsqueda diferente o carga los datos iniciales.
+                      </p>
+                      <Button 
+                        color="primary" 
+                        className="mt-4"
+                        onPress={loadAllRestaurants}
+                      >
+                        Cargar todos los restaurantes
+                      </Button>
+                    </CardBody>
+                  </Card>
+                ) : (
+                  restaurants.map((restaurant) => (
+                    <RestaurantCard
+                      key={restaurant._id}
+                      restaurant={restaurant}
+                      onAddToCart={handleAddToCart}
+                    />
+                  ))
                 )}
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm ${
-                usedMCP 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-blue-100 text-blue-800'
-              }`}>
-                {usedMCP ? '🤖 IA + Base de Datos' : '🧪 Modo Demo'}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {dishes.map((dish) => (
-                <DishCard key={dish._id} dish={dish} />
-              ))}
-            </div>
+            )}
           </div>
-        )}
 
-        {/* Example queries */}
-        {!hasSearched && (
-          <div className="mt-12">
-            <h3 className="text-lg font-medium text-gray-700 mb-4 text-center">
-              Ejemplos de búsquedas:
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                'Algo vegano con arroz, rápido y sin picante',
-                'Comida tradicional española con carne',
-                'Plato sin gluten y económico',
-                'Algo picante con pollo para llevar'
-              ].map((example, index) => (
-                <Card 
-                  key={index} 
-                  isPressable 
-                  onPress={() => setQuery(example)}
-                  className="hover:scale-105 transition-transform"
-                >
-                  <CardBody className="p-4">
-                    <p className="text-gray-600 text-center">"{example}"</p>
-                  </CardBody>
-                </Card>
-              ))}
+          {/* Carrito lateral */}
+          <div className="lg:w-80">
+            <div className="sticky top-8">
+              <CartComponent
+                cartItems={cartItems}
+                onUpdateQuantity={handleUpdateQuantity}
+                onRemoveItem={handleRemoveItem}
+                onClearCart={handleClearCart}
+              />
             </div>
           </div>
-        )}
+        </div>
       </div>
-    </main>
+      
+      {/* Footer */}
+      <Footer />
+    </div>
   )
 } 

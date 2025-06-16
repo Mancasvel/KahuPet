@@ -11,19 +11,19 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 Procesando consulta con MCP:', query)
 
-    // Paso 1: Obtener información de los platos disponibles usando MCP
-    const allDishes = await getAllDishesFromMCP()
+    // Paso 1: Obtener información de restaurantes y platos usando MCP
+    const { allDishes, allRestaurants } = await getAllDataFromMCP()
     
     if (!allDishes || allDishes.length === 0) {
       return NextResponse.json({ 
-        error: 'No se pudieron obtener los platos de la base de datos',
+        error: 'No se pudieron obtener los datos de la base de datos',
         suggestion: 'Verifica que la base de datos esté poblada'
       }, { status: 500 })
     }
 
-    console.log(`📋 Encontrados ${allDishes.length} platos en la base de datos`)
+    console.log(`📋 Encontrados ${allDishes.length} platos en ${allRestaurants.length} restaurantes`)
 
-    // Paso 2: Llamar al LLM con el contexto completo
+    // Paso 2: Llamar al LLM con el contexto completo de platos
     const llmResponse = await callOpenRouter(query, allDishes)
     
     if (!llmResponse) {
@@ -34,13 +34,103 @@ export async function POST(request: NextRequest) {
 
     // Paso 3: Filtrar y ordenar los resultados
     let recommendedDishes: any[] = []
+    let dynamicMenu: any[] = []
+    let groupSuggestion: any = null
+
+    // Verificar si hay sugerencias de menús para grupos
+    if (llmResponse.groupSuggestions && llmResponse.groupSuggestions.people > 0) {
+      console.log('👥 Detectado grupo de personas:', llmResponse.groupSuggestions)
+      groupSuggestion = llmResponse.groupSuggestions
+      
+      // Crear menú dinámico basado en los platos sugeridos por el LLM
+      if (llmResponse.groupSuggestions.dishIds && llmResponse.groupSuggestions.dishIds.length > 0) {
+        const suggestedDishes = allDishes.filter((dish: any) => 
+          llmResponse.groupSuggestions!.dishIds.includes(dish._id) ||
+          llmResponse.groupSuggestions!.dishIds.includes(dish.name)
+        )
+        
+        // Si encontramos platos sugeridos, filtrar para que sean del mismo restaurante
+        if (suggestedDishes.length > 0) {
+          const groupedByRestaurant = suggestedDishes.reduce((acc: any, dish: any) => {
+            const restaurantId = dish.restaurant._id
+            if (!acc[restaurantId]) acc[restaurantId] = []
+            acc[restaurantId].push(dish)
+            return acc
+          }, {})
+          
+          // Encontrar el restaurante con más platos que coincidan
+          const bestRestaurant = Object.keys(groupedByRestaurant).reduce((best, current) => 
+            groupedByRestaurant[current].length > groupedByRestaurant[best].length ? current : best
+          )
+          
+          dynamicMenu.push(...groupedByRestaurant[bestRestaurant].slice(0, groupSuggestion.people))
+        } else {
+          // Si no encontramos platos específicos, usar las recomendaciones generales del mismo restaurante
+          const fallbackDishes = allDishes.filter((dish: any) => 
+            llmResponse.recomendaciones.includes(dish._id) || 
+            llmResponse.recomendaciones.includes(dish.name)
+          )
+          
+          if (fallbackDishes.length > 0) {
+            const firstRestaurantId = fallbackDishes[0].restaurant._id
+            let sameRestaurantDishes = allDishes.filter((dish: any) => 
+              dish.restaurant._id === firstRestaurantId
+            ).slice(0, groupSuggestion.people)
+            
+            // Si no tenemos suficientes platos del mismo restaurante, buscar más platos baratos del mismo restaurante
+            if (sameRestaurantDishes.length < groupSuggestion.people) {
+              const additionalDishes = allDishes
+                .filter((dish: any) => 
+                  dish.restaurant._id === firstRestaurantId && 
+                  !sameRestaurantDishes.some((selected: any) => selected._id === dish._id)
+                )
+                .sort((a: any, b: any) => a.price - b.price)
+                .slice(0, groupSuggestion.people - sameRestaurantDishes.length)
+              
+              sameRestaurantDishes = [...sameRestaurantDishes, ...additionalDishes]
+            }
+            
+            dynamicMenu.push(...sameRestaurantDishes)
+          }
+        }
+      } else {
+        // Si no hay dishIds específicos, usar las recomendaciones del LLM del mismo restaurante
+        const fallbackDishes = allDishes.filter((dish: any) => 
+          llmResponse.recomendaciones.includes(dish._id) || 
+          llmResponse.recomendaciones.includes(dish.name)
+        )
+        
+        if (fallbackDishes.length > 0) {
+          const firstRestaurantId = fallbackDishes[0].restaurant._id
+          let sameRestaurantDishes = allDishes.filter((dish: any) => 
+            dish.restaurant._id === firstRestaurantId
+          ).slice(0, groupSuggestion.people)
+          
+          // Si no tenemos suficientes platos del mismo restaurante, buscar más platos del mismo restaurante
+          if (sameRestaurantDishes.length < groupSuggestion.people) {
+            const additionalDishes = allDishes
+              .filter((dish: any) => 
+                dish.restaurant._id === firstRestaurantId && 
+                !sameRestaurantDishes.some((selected: any) => selected._id === dish._id)
+              )
+              .sort((a: any, b: any) => a.price - b.price)
+              .slice(0, groupSuggestion.people - sameRestaurantDishes.length)
+            
+            sameRestaurantDishes = [...sameRestaurantDishes, ...additionalDishes]
+          }
+          
+          dynamicMenu.push(...sameRestaurantDishes)
+        }
+      }
+    }
 
     // Priorizar recomendaciones específicas del LLM
     if (llmResponse.recomendaciones && llmResponse.recomendaciones.length > 0) {
       console.log('🎯 Usando recomendaciones específicas del LLM:', llmResponse.recomendaciones)
       
       const specificRecommendations = allDishes.filter((dish: any) => 
-        llmResponse.recomendaciones.includes(dish._id)
+        llmResponse.recomendaciones.includes(dish._id) || 
+        llmResponse.recomendaciones.includes(dish.name)
       )
       
       recommendedDishes.push(...specificRecommendations)
@@ -53,16 +143,31 @@ export async function POST(request: NextRequest) {
     recommendedDishes.push(...additionalDishes.slice(0, 8))
 
     // Ordenar por relevancia (precio para empezar)
-    const finalResults = recommendedDishes
+    const finalDishes = recommendedDishes
       .sort((a, b) => a.price - b.price)
       .slice(0, 12)
 
+    // Agrupar restaurantes únicos
+    const restaurantIds = new Set([
+      ...finalDishes.map(d => d.restaurant._id),
+      ...dynamicMenu.map((d: any) => d.restaurant._id)
+    ])
+    
+    const uniqueRestaurants = allRestaurants.filter((restaurant: any) => 
+      restaurantIds.has(restaurant._id)
+    )
+
     return NextResponse.json({
-      dishes: finalResults,
+      dishes: finalDishes,
+      restaurants: uniqueRestaurants,
+      dynamicMenu,
+      groupSuggestion,
       intent: llmResponse,
-      total: finalResults.length,
+      total: finalDishes.length + dynamicMenu.length,
       mcp: true,
-      summary: `Encontré ${finalResults.length} platos que coinciden con tu búsqueda: "${query}"`
+      summary: groupSuggestion?.funnyResponse 
+        ? groupSuggestion.funnyResponse
+        : `Encontré ${finalDishes.length} platos que coinciden con tu búsqueda: "${query}"`
     })
 
   } catch (error) {
@@ -74,24 +179,42 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Función para obtener todos los platos usando el sistema actual
-async function getAllDishesFromMCP() {
+// Función para obtener todos los datos (restaurantes, platos y menús) usando el sistema actual
+async function getAllDataFromMCP() {
   try {
-    // Por ahora, vamos a crear una función que simule el acceso directo
-    // En una implementación completa, esto debería usar las funciones MCP
-    
-    // Para este MVP, podemos usar el endpoint interno
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/dishes`)
+    // Obtener restaurantes que incluyen platos y menús
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/restaurants`)
     
     if (!response.ok) {
-      throw new Error('Failed to fetch dishes')
+      throw new Error('Failed to fetch restaurants')
     }
     
-    const data = await response.json()
-    return data.dishes || []
+    const allRestaurants = await response.json()
+    
+    // Extraer todos los platos de todos los restaurantes
+    const allDishes = allRestaurants.flatMap((restaurant: any) => 
+      restaurant.dishes.map((dish: any) => ({
+        ...dish,
+        restaurant: {
+          name: restaurant.name,
+          address: restaurant.address,
+          _id: restaurant._id
+        }
+      }))
+    )
+
+
+
+    return {
+      allRestaurants,
+      allDishes
+    }
   } catch (error) {
-    console.error('Error fetching dishes via MCP:', error)
-    return []
+    console.error('Error fetching data via MCP:', error)
+    return {
+      allRestaurants: [],
+      allDishes: []
+    }
   }
 }
 
