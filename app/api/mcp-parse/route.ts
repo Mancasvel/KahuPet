@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     let dynamicMenu: any[] = []
     let groupSuggestion: any = null
 
-    // Verificar si hay sugerencias de menús para grupos
+    // Verificar sugerencias de menús (ahora siempre debe haber algo)
     if (llmResponse.groupSuggestions && llmResponse.groupSuggestions.people > 0) {
       console.log('👥 Detectado grupo de personas:', llmResponse.groupSuggestions)
       groupSuggestion = llmResponse.groupSuggestions
@@ -121,6 +121,28 @@ export async function POST(request: NextRequest) {
           
           dynamicMenu.push(...sameRestaurantDishes)
         }
+      }
+    } else {
+      // Si el LLM no generó grupo, crear uno por defecto
+      console.log('🔄 No se detectó grupo, creando sugerencia por defecto')
+      groupSuggestion = {
+        people: 2,
+        dishIds: [],
+        explanation: 'Selección especial de la casa para ti',
+        funnyResponse: '¡Aventura gastronómica! Te preparamos algo delicioso 🌟🍴'
+      }
+      
+      // Crear un menú por defecto con platos variados del primer restaurante
+      if (allDishes.length > 0) {
+        const defaultRestaurant = allDishes[0].restaurant._id
+        const defaultDishes = allDishes
+          .filter((dish: any) => dish.restaurant._id === defaultRestaurant)
+          .slice(0, groupSuggestion.people)
+        
+        dynamicMenu.push(...defaultDishes)
+        
+        // Actualizar los dishIds con los platos seleccionados
+        groupSuggestion.dishIds = defaultDishes.map((dish: any) => dish._id)
       }
     }
 

@@ -64,18 +64,24 @@ Donde:
 
 ${dishesContext}
 
-DETECCIÓN DE GRUPOS: Si el usuario menciona:
-- "somos X", "para X personas", "X amigos", "cena romántica", "pareja", "familia", etc.
-- Llenar groupSuggestions con people > 0 y seleccionar platos específicos para crear un menú dinámico
+DETECCIÓN DE GRUPOS Y SITUACIONES: 
+- Si menciona número de personas: "somos X", "para X personas", "X amigos", "pareja", "familia"
+- Si NO menciona personas específicas, INFERIR del contexto:
+  - "ganado la champions", "celebración" → asumir grupo de 4 personas (celebración)
+  - "ingeniero", "trabajo", "reunión" → asumir 2-3 personas (trabajo)
+  - "romántico", "cita" → asumir 2 personas
+  - "solo", "yo", "para mí" → asumir 1 persona
+  - "familia" → asumir 4 personas
+  - Si no hay contexto claro → asumir 2 personas por defecto
 
-LÓGICA DE SELECCIÓN DE PLATOS:
+LÓGICA DE SELECCIÓN DE PLATOS (SIEMPRE GENERAR ALGO):
 1. PRIORIDAD: restricciones (barato, vegano, rápido) > categorías (italiana, japonesa) > ingredientes
-2. Si menciona "barato/económico": buscar platos con precios más bajos DEL MISMO RESTAURANTE
-3. Si menciona tipo de cocina: filtrar por esa cocina específicamente DEL MISMO RESTAURANTE
-4. Si menciona "vegano/vegetariano": priorizar platos con esas etiquetas DEL MISMO RESTAURANTE
-5. Seleccionar número de platos = número de personas (máximo 4) DEL MISMO RESTAURANTE
+2. Si menciona restricciones específicas: buscar platos que las cumplan
+3. Si menciona situación especial (celebración, trabajo, cita): adaptar la selección
+4. Si NO hay restricciones claras: seleccionar platos populares/variados
+5. SIEMPRE seleccionar número de platos = número de personas inferido
 6. IMPORTANTE: Todos los dishIds deben ser de platos que pertenezcan al mismo restaurante
-7. funnyResponse debe reflejar la restricción/preferencia PRINCIPAL mencionada
+7. funnyResponse debe ser SIEMPRE contextual y divertida, incluso para consultas vagas
 
 REGLAS PARA funnyResponse:
 - Debe ser contextual y relevante a la búsqueda específica del usuario
@@ -83,23 +89,26 @@ REGLAS PARA funnyResponse:
 - Mencionar el número de personas de forma natural
 - Ser entusiasta y divertida
 
-EJEMPLOS CONTEXTUALES DE funnyResponse:
-- Búsqueda con restricción de PRECIO: "somos 3 y queremos barato" → "¡Perfecto! 3 deliciosos platos económicos que no romperán el banco 💰✨"
-- Búsqueda con TIPO DE COCINA: "somos 4 y queremos comida italiana" → "¡Mamma mia! La famiglia italiana de 4 está servida 🍝👨‍👩‍👧‍👦"
-- Búsqueda con RESTRICCIÓN DIETARIA: "vegano para 2 personas" → "¡Green power! Menú vegano delicioso para 2 🌱💚"
-- Búsqueda con VELOCIDAD: "algo rápido para 1" → "¡Express! Comida rápida pero deliciosa para ti 🚀🍽️"
-- Búsqueda con NIVEL DE PICANTE: "picante para 3 amigos" → "¡Fuego! 3 platos que van a hacer sudar a la pandilla 🌶️🔥"
-- Búsqueda con CALIDAD: "premium para 2" → "¡De lujo! Experiencia gastronómica premium para 2 🌟👑"
-- Búsqueda ROMÁNTICA + TIPO: "cena romántica para 2, sushi" → "¡Arigato! Experiencia sushi perfecta para enamorarse 🍣💕"
+EJEMPLOS CONTEXTUALES DE funnyResponse (SIEMPRE RESPONDER):
+- Restricción de PRECIO: "somos 3 y queremos barato" → "¡Perfecto! 3 deliciosos platos económicos que no romperán el banco 💰✨"
+- TIPO DE COCINA: "somos 4 y queremos comida italiana" → "¡Mamma mia! La famiglia italiana de 4 está servida 🍝👨‍👩‍👧‍👦"
+- RESTRICCIÓN DIETARIA: "vegano para 2 personas" → "¡Green power! Menú vegano delicioso para 2 🌱💚"
+- CELEBRACIÓN: "hemos ganado la champions" → "¡CAMPEONES! Menú de celebración digno de los ganadores 🏆🎉"
+- TRABAJO/PROFESIONAL: "soy ingeniero de software" → "¡Código y comida perfecta! Menú para programadores que saben de buen sabor 💻🍽️"
+- ROMÁNTICO: "algo romántico" → "¡Amor a primera mordida! Menú romántico para conquistar corazones 💕🕯️"
+- VAGO/GENERAL: "quiero algo rico" → "¡Sorpresa culinaria! Selección especial de la casa para ti 🎲✨"
+- SIN CONTEXTO: consultas vagas → "¡Aventura gastronómica! Te preparamos algo delicioso 🌟🍴"
 
-REGLA CLAVE: La respuesta debe mencionar la característica PRINCIPAL de la búsqueda (precio, dieta, velocidad, etc.), NO asumir el tipo de cocina si no se especifica.
+REGLA CLAVE: NUNCA dejar groupSuggestions vacío. Siempre inferir personas, siempre generar dishIds, siempre dar una respuesta divertida.
 
 Ejemplos:
 1. "Quiero algo vegano con arroz" → {"ingredientes": ["arroz"], "restricciones": ["vegano"], "categorias": [], "recomendaciones": ["dish_001"], "groupSuggestions": {"people": 0, "dishIds": [], "explanation": "", "funnyResponse": ""}}
 
 2. "Somos 3 y queremos barato" → {"ingredientes": [], "restricciones": ["barato"], "categorias": [], "recomendaciones": ["dish_003"], "groupSuggestions": {"people": 3, "dishIds": ["dish_003", "dish_009", "dish_014"], "explanation": "Menú económico para 3 personas con platos de buen precio", "funnyResponse": "¡Perfecto! 3 deliciosos platos económicos que no romperán el banco 💰✨"}}
 
-3. "Somos 4 y queremos comida italiana" → {"ingredientes": [], "restricciones": [], "categorias": ["italiana"], "recomendaciones": ["dish_001"], "groupSuggestions": {"people": 4, "dishIds": ["dish_001", "dish_002", "dish_003", "dish_016"], "explanation": "Menú italiano completo para 4 personas", "funnyResponse": "¡Mamma mia! La famiglia italiana de 4 está servida 🍝👨‍👩‍👧‍👦"}}
+3. "Hemos ganado la champions" → {"ingredientes": [], "restricciones": [], "categorias": [], "recomendaciones": [], "groupSuggestions": {"people": 4, "dishIds": ["dish_001", "dish_002", "dish_003", "dish_016"], "explanation": "Menú de celebración para 4 campeones", "funnyResponse": "¡CAMPEONES! Menú de celebración digno de los ganadores 🏆🎉"}}
+
+4. "Soy ingeniero de software" → {"ingredientes": [], "restricciones": [], "categorias": [], "recomendaciones": [], "groupSuggestions": {"people": 2, "dishIds": ["dish_007", "dish_008"], "explanation": "Menú energético para programadores", "funnyResponse": "¡Código y comida perfecta! Menú para programadores que saben de buen sabor 💻🍽️"}}
 
 IMPORTANTE: 
 1. Solo devuelve el JSON, sin explicaciones adicionales.
