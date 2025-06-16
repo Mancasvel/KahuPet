@@ -204,14 +204,11 @@ export async function POST(request: NextRequest) {
 // Función para obtener todos los datos (restaurantes, platos y menús) usando el sistema actual
 async function getAllDataFromMCP() {
   try {
-    // Obtener restaurantes que incluyen platos y menús
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/restaurants`)
+    // En lugar de hacer un fetch HTTP, importamos directamente la función del API
+    const { restaurantData } = await import('@/lib/seeders')
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch restaurants')
-    }
-    
-    const allRestaurants = await response.json()
+    // Obtener los datos directamente
+    const allRestaurants = restaurantData
     
     // Extraer todos los platos de todos los restaurantes
     const allDishes = allRestaurants.flatMap((restaurant: any) => 
@@ -224,8 +221,6 @@ async function getAllDataFromMCP() {
         }
       }))
     )
-
-
 
     return {
       allRestaurants,

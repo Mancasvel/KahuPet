@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Input, Button, Card, CardBody, Divider, Spinner, Badge } from '@heroui/react'
 import { RestaurantCard } from '@/components/RestaurantCard'
-import { CartComponent } from '@/components/CartComponent'
 import { DynamicMenuCard } from '@/components/DynamicMenuCard'
 import { NavbarComponent } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
@@ -59,9 +58,9 @@ export default function Home() {
   }, [])
 
   // Cargar restaurantes al montar el componente
-  useState(() => {
+  useEffect(() => {
     loadAllRestaurants()
-  })
+  }, [loadAllRestaurants])
 
   const searchDishes = async () => {
     if (!query.trim()) {
@@ -197,114 +196,131 @@ export default function Home() {
   const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-red-50">
-      {/* Navbar */}
+    <div className="min-h-screen bg-white">
+      {/* Navbar estilo Glovo */}
       <NavbarComponent cartItemsCount={totalCartItems} />
       
-      <div className="container mx-auto px-4 py-8">
-        {/* Header mejorado */}
-        <div className="text-center mb-12">
-          <div className="relative">
-            <h1 className="text-5xl md:text-7xl font-black bg-gradient-to-r from-orange-600 via-red-500 to-pink-500 bg-clip-text text-transparent mb-6">
-              🍽️ Komi
+      {/* Hero Section estilo Glovo - MÁS GRANDE Y CENTRADO */}
+      <section className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 text-white min-h-[70vh] flex items-center justify-center">
+        <div className="container mx-auto px-4 py-16">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
+              Comida a domicilio y mucho más
             </h1>
-            <div className="absolute -top-2 -right-2 text-2xl animate-bounce">✨</div>
-            <div className="absolute -bottom-2 -left-2 text-2xl animate-pulse">🌟</div>
+            <p className="text-2xl md:text-3xl mb-12 font-light max-w-3xl mx-auto">
+              Restaurantes, comida rápida, ¡lo que sea!
+            </p>
+            
+            {/* Barra de búsqueda principal estilo Glovo - CENTRADA */}
+            <div className="bg-white rounded-lg p-3 shadow-2xl max-w-3xl mx-auto">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex-1 relative">
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Introduce tu dirección para saber qué hay cerca de ti"
+                    size="lg"
+                    classNames={{
+                      input: "text-gray-700 text-lg",
+                      inputWrapper: "bg-white border-0 shadow-none h-16"
+                    }}
+                    startContent={<span className="text-gray-400 text-xl">📍</span>}
+                  />
+                </div>
+                <Button 
+                  color="primary" 
+                  size="lg"
+                  onPress={searchDishes}
+                  isDisabled={isLoading}
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-16 px-10 text-lg"
+                >
+                  {isLoading ? <Spinner size="sm" /> : 'Buscar'}
+                </Button>
+              </div>
+              
+              {/* Enlaces de ejemplo - CENTRADOS */}
+              <div className="mt-6 flex flex-wrap gap-3 justify-center">
+                <Button 
+                  size="sm" 
+                  variant="light" 
+                  className="text-gray-600 text-sm h-10 px-4 hover:bg-gray-100 rounded-full" 
+                  onPress={() => setQuery("somos 4 y queremos pizza")}
+                >
+                  Pizza para 4 personas
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="light" 
+                  className="text-gray-600 text-sm h-10 px-4 hover:bg-gray-100 rounded-full" 
+                  onPress={() => setQuery("comida vegana para 2")}
+                >
+                  Comida vegana
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="light" 
+                  className="text-gray-600 text-sm h-10 px-4 hover:bg-gray-100 rounded-full" 
+                  onPress={() => setQuery("algo barato y rápido")}
+                >
+                  Rápido y barato
+                </Button>
+              </div>
+            </div>
           </div>
-          <p className="text-xl text-gray-700 mb-4 font-medium">
-            Descubre los mejores restaurantes y crea menús perfectos
-          </p>
-          <p className="text-sm text-gray-500 max-w-2xl mx-auto">
-            Nuestra IA inteligente analiza tus preferencias y crea menús personalizados para cualquier ocasión. 
-            ¡Solo dinos qué quieres y nosotros nos encargamos del resto!
-          </p>
         </div>
+      </section>
+
+      {/* Marcas populares estilo Glovo */}
+      {!isLoading && restaurants.length > 0 && (
+        <section className="py-8 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Los mejores restaurantes</h2>
+            <div className="flex gap-4 overflow-x-auto pb-2">
+              {restaurants.slice(0, 8).map((restaurant) => (
+                <div key={restaurant._id} className="flex-none">
+                  <div className="w-20 h-20 bg-white rounded-lg shadow-sm flex items-center justify-center">
+                    <span className="text-2xl">🍽️</span>
+                  </div>
+                  <p className="text-xs text-center mt-2 w-20 truncate">{restaurant.name}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <div className="container mx-auto px-4 py-8">
+        {/* Estado de búsqueda */}
+        {(summary || isLoading) && (
+          <div className="mb-6">
+            <Card className="border-0 shadow-sm">
+              <CardBody className="py-4">
+                <div className="flex items-center gap-3">
+                  {isMCPMode ? (
+                    <Badge color="success" variant="flat" className="bg-green-100 text-green-700">
+                      🤖 IA Activada
+                    </Badge>
+                  ) : (
+                    <Badge color="warning" variant="flat" className="bg-yellow-100 text-yellow-700">
+                      🧪 Modo Demo
+                    </Badge>
+                  )}
+                  <span className="text-gray-700">
+                    {isLoading ? 'Buscando los mejores restaurantes cerca de ti...' : summary}
+                  </span>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        )}
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Área principal */}
           <div className="flex-1">
-            {/* Barra de búsqueda mejorada */}
-            <div className="mb-8">
-              <div className="max-w-4xl mx-auto">
-                <div className="bg-white rounded-2xl shadow-xl p-6 border border-orange-200">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <Input
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="¿Qué te apetece comer hoy? Ej: 'somos 3 personas y queremos comida italiana', 'quiero algo vegano y barato', 'sushi para 2'"
-                      size="lg"
-                      className="flex-1"
-                      startContent={<span className="text-xl">🔍</span>}
-                      classNames={{
-                        input: "text-lg",
-                        inputWrapper: "bg-gray-50 border-2 border-gray-200 hover:border-orange-300 focus-within:border-orange-500"
-                      }}
-                    />
-                    <Button 
-                      color="primary" 
-                      size="lg"
-                      onPress={searchDishes}
-                      isDisabled={isLoading}
-                      className="bg-gradient-to-r from-orange-500 to-red-500 font-semibold text-white min-w-32 shadow-lg hover:shadow-xl transition-all"
-                    >
-                      {isLoading ? <Spinner size="sm" color="white" /> : '🚀 Buscar'}
-                    </Button>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                    <span className="text-xs text-gray-500">Ejemplos populares:</span>
-                    <Button 
-                      size="sm" 
-                      variant="flat" 
-                      className="text-xs h-6 hover:bg-orange-100" 
-                      onPress={() => setQuery("somos 4 y queremos pizza")}
-                    >
-                      somos 4 y queremos pizza
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="flat" 
-                      className="text-xs h-6 hover:bg-orange-100" 
-                      onPress={() => setQuery("comida vegana para 2")}
-                    >
-                      comida vegana para 2
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="flat" 
-                      className="text-xs h-6 hover:bg-orange-100" 
-                      onPress={() => setQuery("algo barato y rápido")}
-                    >
-                      algo barato y rápido
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Estado de conexión y resumen */}
-            {(summary || isLoading) && (
-              <Card className="mb-6">
-                <CardBody>
-                  <div className="flex items-center gap-2">
-                    {isMCPMode ? (
-                      <Badge color="success" variant="flat">🤖 IA + Base de Datos</Badge>
-                    ) : (
-                      <Badge color="warning" variant="flat">🧪 Modo Demo</Badge>
-                    )}
-                    <span className="text-gray-700">
-                      {isLoading ? 'Buscando los mejores restaurantes...' : summary}
-                    </span>
-                  </div>
-                  
-
-                </CardBody>
-              </Card>
-            )}
-
             {/* Menú dinámico generado por IA */}
             {dynamicMenu.length > 0 && groupSuggestion && (
-              <div className="mb-6">
+              <div className="mb-8">
                 <DynamicMenuCard
                   dishes={dynamicMenu}
                   groupSuggestion={groupSuggestion}
@@ -313,54 +329,49 @@ export default function Home() {
               </div>
             )}
 
-            {/* Lista de restaurantes */}
+            {/* Lista de restaurantes estilo Glovo */}
             {isLoading ? (
-              <div className="text-center py-12">
-                <Spinner size="lg" />
+              <div className="text-center py-16">
+                <Spinner size="lg" className="text-yellow-500" />
                 <p className="mt-4 text-gray-600">Analizando tu solicitud...</p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {restaurants.length === 0 ? (
-                  <Card>
-                    <CardBody className="text-center py-12">
+                  <Card className="border-0 shadow-sm">
+                    <CardBody className="text-center py-16">
                       <div className="text-6xl mb-4">🔍</div>
-                      <h3 className="text-xl font-semibold mb-2">No se encontraron restaurantes</h3>
-                      <p className="text-gray-600">
-                        Intenta con una búsqueda diferente o carga los datos iniciales.
+                      <h3 className="text-xl font-semibold mb-2 text-gray-800">No encontramos restaurantes</h3>
+                      <p className="text-gray-600 mb-6">
+                        Intenta con una búsqueda diferente o explora todos los restaurantes disponibles.
                       </p>
                       <Button 
                         color="primary" 
-                        className="mt-4"
+                        className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
                         onPress={loadAllRestaurants}
                       >
-                        Cargar todos los restaurantes
+                        Ver todos los restaurantes
                       </Button>
                     </CardBody>
                   </Card>
                 ) : (
-                  restaurants.map((restaurant) => (
-                    <RestaurantCard
-                      key={restaurant._id}
-                      restaurant={restaurant}
-                      onAddToCart={handleAddToCart}
-                    />
-                  ))
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-semibold text-gray-800">
+                        {restaurants.length} restaurantes disponibles
+                      </h2>
+                    </div>
+                    {restaurants.map((restaurant) => (
+                      <RestaurantCard
+                        key={restaurant._id}
+                        restaurant={restaurant}
+                        onAddToCart={handleAddToCart}
+                      />
+                    ))}
+                  </>
                 )}
               </div>
             )}
-          </div>
-
-          {/* Carrito lateral */}
-          <div className="lg:w-80">
-            <div className="sticky top-8">
-              <CartComponent
-                cartItems={cartItems}
-                onUpdateQuantity={handleUpdateQuantity}
-                onRemoveItem={handleRemoveItem}
-                onClearCart={handleClearCart}
-              />
-            </div>
           </div>
         </div>
       </div>

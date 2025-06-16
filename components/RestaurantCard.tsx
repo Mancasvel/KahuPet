@@ -1,24 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardBody, CardHeader, Button, Badge, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@heroui/react'
-import { DishCard } from './DishCard'
+import { Card, CardBody, Button, Chip, Divider } from '@heroui/react'
 
 interface Dish {
   _id: string
   name: string
   description: string
-  ingredients: string[]
-  tags: string[]
   price: number
-  category: string
   image: string
-  cookingTime: number
-  spicyLevel: number
-  portionSize: string
+  tags?: string[]
 }
-
-
 
 interface Restaurant {
   _id: string
@@ -34,193 +25,118 @@ interface Restaurant {
   dishes: Dish[]
 }
 
-interface CartItem {
-  id: string
-  name: string
-  price: number
-  quantity: number
-  type: 'dish' | 'menu'
-  restaurantId: string
-  restaurantName: string
-}
-
-interface Props {
+interface RestaurantCardProps {
   restaurant: Restaurant
-  onAddToCart: (item: CartItem) => void
+  onAddToCart: (item: any) => void
 }
 
-export function RestaurantCard({ restaurant, onAddToCart }: Props) {
-  const { isOpen, onOpen, onOpenChange } = useDisclosure()
-  const [selectedCategory, setSelectedCategory] = useState<string>('all')
-
-  // Obtener categorías únicas
-  const categories = ['all', ...Array.from(new Set(restaurant.dishes.map(dish => dish.category)))]
-  
-  // Filtrar platos por categoría
-  const filteredDishes = selectedCategory === 'all' 
-    ? restaurant.dishes 
-    : restaurant.dishes.filter(dish => dish.category === selectedCategory)
-
-  const handleAddDish = (dish: Dish) => {
+export function RestaurantCard({ restaurant, onAddToCart }: RestaurantCardProps) {
+  const handleAddToCart = (dish: Dish) => {
     onAddToCart({
       id: dish._id,
       name: dish.name,
       price: dish.price,
       quantity: 1,
-      type: 'dish',
+      type: 'dish' as const,
       restaurantId: restaurant._id,
       restaurantName: restaurant.name
     })
   }
 
-
-
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4.5) return 'success'
-    if (rating >= 4.0) return 'warning'
-    return 'danger'
-  }
-
-  const getPriceRangeColor = (range: string) => {
-    if (range === '€') return 'success'
-    if (range === '€€') return 'warning'
-    if (range === '€€€') return 'danger'
-    return 'secondary'
-  }
-
   return (
-    <>
-      <Card className="w-full shadow-lg hover:shadow-xl transition-shadow">
-        <CardHeader className="pb-0">
-          <div className="flex justify-between items-start w-full">
-            <div className="flex flex-col gap-2">
-              <h3 className="text-2xl font-bold text-gray-800">{restaurant.name}</h3>
-              <p className="text-gray-600">{restaurant.description}</p>
-              <div className="flex gap-2 flex-wrap">
-                {restaurant.cuisine.map((type) => (
-                  <Chip key={type} color="primary" variant="flat" size="sm">
-                    {type}
-                  </Chip>
-                ))}
+    <Card className="border-0 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white">
+      <CardBody className="p-0">
+        {/* Header del restaurante */}
+        <div className="flex p-4 border-b border-gray-100">
+          <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mr-4">
+            <span className="text-3xl">🍽️</span>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-gray-900 mb-1">{restaurant.name}</h3>
+            <p className="text-gray-600 text-sm mb-2">{restaurant.description}</p>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1">
+                <span className="text-yellow-500">⭐</span>
+                <span className="font-medium">{restaurant.rating}</span>
               </div>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <Badge color={getRatingColor(restaurant.rating)} content={restaurant.rating}>
-                <div className="w-8 h-8" />
-              </Badge>
-              <Chip color={getPriceRangeColor(restaurant.priceRange)} size="sm">
-                {restaurant.priceRange}
-              </Chip>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-600">{restaurant.deliveryTime}</span>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-600">{restaurant.priceRange}</span>
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardBody className="pt-4">
-          <div className="flex justify-between items-center mb-4 text-sm text-gray-600">
-            <span>📍 {restaurant.address}</span>
-            <span>🚚 {restaurant.deliveryTime}</span>
-            <span>💰 Mín: €{restaurant.minOrder}</span>
-          </div>
-
-          <Divider className="my-4" />
-
-
-
-          {/* Platos individuales - Vista previa */}
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-semibold text-gray-700">🍕 Platos Individuales</h4>
-            <Button color="primary" variant="flat" onPress={onOpen}>
-              Ver todos los platos ({restaurant.dishes.length})
-            </Button>
-          </div>
-
-          {/* Mostrar primeros 3 platos como preview */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {restaurant.dishes.slice(0, 3).map((dish) => (
-              <div key={dish._id} className="border rounded-lg p-3">
-                <img 
-                  src={dish.image} 
-                  alt={dish.name}
-                  className="w-full h-32 object-cover rounded-lg mb-2"
-                />
-                <h5 className="font-medium text-sm mb-1">{dish.name}</h5>
-                <p className="text-xs text-gray-600 mb-2 line-clamp-2">{dish.description}</p>
-                <div className="flex justify-between items-center">
-                  <span className="font-bold text-blue-600">€{dish.price}</span>
-                  <Button 
-                    size="sm" 
-                    color="primary"
-                    onPress={() => handleAddDish(dish)}
-                  >
-                    +
-                  </Button>
+        {/* Platos disponibles */}
+        <div className="p-4">
+          <h4 className="font-semibold text-gray-800 mb-3">Platos disponibles</h4>
+          <div className="space-y-3">
+            {restaurant.dishes?.slice(0, 4).map((dish) => (
+              <div key={dish._id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                <div className="flex items-center gap-3 flex-1">
+                  <img 
+                    src={dish.image} 
+                    alt={dish.name}
+                    className="w-16 h-16 object-cover rounded-lg"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h5 className="font-semibold text-gray-900 text-sm mb-1 truncate">{dish.name}</h5>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2">{dish.description}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-gray-900">€{dish.price.toFixed(2)}</span>
+                      {dish.tags && dish.tags.length > 0 && (
+                        <Chip size="sm" variant="flat" className="text-xs">
+                          {dish.tags[0]}
+                        </Chip>
+                      )}
+                    </div>
+                  </div>
                 </div>
+                <Button
+                  size="sm"
+                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold ml-3"
+                  onPress={() => handleAddToCart(dish)}
+                >
+                  Añadir
+                </Button>
               </div>
             ))}
           </div>
-        </CardBody>
-      </Card>
-
-      {/* Modal con todos los platos */}
-      <Modal 
-        isOpen={isOpen} 
-        onOpenChange={onOpenChange}
-        size="5xl"
-        scrollBehavior="inside"
-      >
-        <ModalContent>
-          {(onClose) => (
-            <>
-              <ModalHeader className="flex flex-col gap-1">
-                <h3 className="text-xl font-bold">{restaurant.name} - Carta Completa</h3>
-                <p className="text-sm text-gray-600">{restaurant.description}</p>
-              </ModalHeader>
-              <ModalBody>
-                {/* Filtros por categoría */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium mb-2">Filtrar por categoría:</h4>
-                  <div className="flex gap-2 flex-wrap">
-                    {categories.map((category) => (
-                      <Chip
-                        key={category}
-                        color={selectedCategory === category ? "primary" : "default"}
-                        variant={selectedCategory === category ? "solid" : "flat"}
-                        className="cursor-pointer"
-                        onClick={() => setSelectedCategory(category)}
-                      >
-                        {category === 'all' ? 'Todos' : category}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Grid de platos */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredDishes.map((dish) => (
-                    <DishCard 
-                      key={dish._id} 
-                      dish={{
-                        ...dish,
-                        restaurant: {
-                          name: restaurant.name,
-                          address: restaurant.address
-                        }
-                      }} 
-                      onAddToCart={() => handleAddDish(dish)}
-                      showAddButton={true}
-                    />
-                  ))}
-                </div>
-              </ModalBody>
-              <ModalFooter>
-                <Button color="danger" variant="light" onPress={onClose}>
-                  Cerrar
-                </Button>
-              </ModalFooter>
-            </>
+          
+          {restaurant.dishes && restaurant.dishes.length > 4 && (
+            <div className="mt-4 text-center">
+              <Button 
+                variant="light" 
+                size="sm"
+                className="text-yellow-600 hover:text-yellow-700 font-medium"
+              >
+                Ver todos los platos ({restaurant.dishes.length})
+              </Button>
+            </div>
           )}
-        </ModalContent>
-      </Modal>
-    </>
+        </div>
+
+        {/* Info adicional */}
+        <div className="px-4 pb-4">
+          <div className="flex flex-wrap gap-2 mb-3">
+            {restaurant.cuisine.map((type, index) => (
+              <Chip 
+                key={index} 
+                size="sm" 
+                variant="flat" 
+                className="bg-gray-100 text-gray-700 text-xs"
+              >
+                {type}
+              </Chip>
+            ))}
+          </div>
+          <div className="text-xs text-gray-500">
+            <p>📍 {restaurant.address}</p>
+            <p>📞 {restaurant.phone}</p>
+            <p>💳 Pedido mínimo: €{restaurant.minOrder}</p>
+          </div>
+        </div>
+      </CardBody>
+    </Card>
   )
 } 

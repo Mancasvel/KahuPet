@@ -1,81 +1,80 @@
 'use client'
 
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Link, Button, Badge } from '@heroui/react'
+import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Badge } from '@heroui/react'
 
 interface NavbarComponentProps {
-  cartItemsCount?: number
+  cartItemsCount: number
 }
 
-export function NavbarComponent({ cartItemsCount = 0 }: NavbarComponentProps) {
+export function NavbarComponent({ cartItemsCount }: NavbarComponentProps) {
   return (
-    <Navbar className="bg-gradient-to-r from-orange-500 via-red-500 to-pink-500 shadow-lg" maxWidth="full">
+    <Navbar 
+      maxWidth="full" 
+      className="bg-white border-b border-gray-200 shadow-sm"
+      height="72px"
+    >
       <NavbarBrand>
         <div className="flex items-center gap-2">
-          <span className="text-3xl">🍽️</span>
-          <p className="font-bold text-white text-2xl">Komi</p>
+          <div className="bg-yellow-400 rounded-lg p-2">
+            <span className="text-2xl font-bold text-black">K</span>
+          </div>
+          <span className="text-2xl font-bold text-gray-800">Komi</span>
         </div>
       </NavbarBrand>
 
-      <NavbarContent className="hidden sm:flex gap-6" justify="center">
+      <NavbarContent className="hidden sm:flex gap-8" justify="center">
         <NavbarItem>
-          <Link 
-            href="#" 
-            className="text-white hover:text-orange-100 font-medium transition-colors"
+          <Button 
+            variant="light" 
+            className="text-gray-700 font-medium hover:text-yellow-600"
           >
-            🏠 Inicio
-          </Link>
+            Restaurantes
+          </Button>
         </NavbarItem>
         <NavbarItem>
-          <Link 
-            href="#" 
-            className="text-white hover:text-orange-100 font-medium transition-colors"
+          <Button 
+            variant="light" 
+            className="text-gray-700 font-medium hover:text-yellow-600"
           >
-            🍕 Restaurantes
-          </Link>
+            Categorías
+          </Button>
         </NavbarItem>
         <NavbarItem>
-          <Link 
-            href="#" 
-            className="text-white hover:text-orange-100 font-medium transition-colors"
+          <Button 
+            variant="light" 
+            className="text-gray-700 font-medium hover:text-yellow-600"
           >
-            👥 Menús Grupales
-          </Link>
-        </NavbarItem>
-        <NavbarItem>
-          <Link 
-            href="#" 
-            className="text-white hover:text-orange-100 font-medium transition-colors"
-          >
-            ⭐ Favoritos
-          </Link>
+            Ofertas
+          </Button>
         </NavbarItem>
       </NavbarContent>
 
       <NavbarContent justify="end">
-        <NavbarItem className="hidden lg:flex">
-          <Link 
-            href="#" 
-            className="text-white hover:text-orange-100 font-medium transition-colors"
-          >
-            📞 Contacto
-          </Link>
-        </NavbarItem>
         <NavbarItem>
           <Button 
-            className="bg-white text-orange-500 font-semibold hover:bg-orange-50 relative"
-            variant="flat"
+            variant="light" 
+            className="text-gray-700 font-medium hover:text-yellow-600"
           >
-            🛒 Carrito
+            Iniciar sesión
+          </Button>
+        </NavbarItem>
+        <NavbarItem>
+          <div className="relative">
+            <Button 
+              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold min-w-unit-20"
+            >
+              🛒 Carrito
+            </Button>
             {cartItemsCount > 0 && (
               <Badge 
                 color="danger" 
-                className="absolute -top-1 -right-1"
                 size="sm"
+                className="absolute -top-1 -right-1 bg-red-500 text-white"
               >
                 {cartItemsCount}
               </Badge>
             )}
-          </Button>
+          </div>
         </NavbarItem>
       </NavbarContent>
     </Navbar>
