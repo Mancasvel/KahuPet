@@ -314,7 +314,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navbar estilo Pawsitive */}
+      {/* Navbar estilo Kahupet */}
       <NavbarComponent onRegisterPet={handleAddNewPet} />
       
       <div className="container mx-auto px-4 py-8">
@@ -324,10 +324,10 @@ export default function Home() {
             <span className="text-4xl">🐾</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            ¡Hola! Soy <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Pawsitive</span>
+            ¡Hola! Soy <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Kahupet</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Cuéntame qué necesita tu mascota y te ayudo con recomendaciones personalizadas de entrenamiento, nutrición y bienestar
+            Entiende a tu mascota - Te ayudo con recomendaciones personalizadas de entrenamiento, nutrición y bienestar
           </p>
 
           {/* Barra de búsqueda principal */}
@@ -524,13 +524,13 @@ export default function Home() {
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 shadow-lg border-2 border-blue-200 max-w-lg text-center">
                 <div className="text-4xl mb-4">🔐</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  ¡Bienvenido a Pawsitive!
+                  ¡Bienvenido a Kahupet!
                 </h3>
                 <p className="text-gray-600 mb-4">
                   Inicia sesión para registrar hasta 5 mascotas y recibir recomendaciones personalizadas
                 </p>
                 <p className="text-sm text-gray-500">
-                  También puedes usar Pawsitive sin registrarte, pero las respuestas no serán personalizadas
+                  También puedes usar Kahupet sin registrarte, pero las respuestas no serán personalizadas
                 </p>
               </div>
             </div>

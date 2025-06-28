@@ -325,7 +325,7 @@ export async function POST(request: NextRequest) {
 
     await client.close()
 
-    return NextResponse.json({
+    return NextResponse.json({ 
       recommendations: matchingRecommendations,
       petVoiceResponse: llmResponse.petVoiceResponse,
       petCharacteristics: llmResponse.petCharacteristics,

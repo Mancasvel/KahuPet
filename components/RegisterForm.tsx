@@ -76,7 +76,7 @@ export function RegisterForm({ onSwitchToLogin, onClose }: RegisterFormProps) {
       <CardBody className="p-6">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            ¡Únete a Pawsitive! 🐾
+            ¡Únete a Kahupet! 🐾
           </h2>
           <p className="text-gray-600">
             Crea tu cuenta para registrar hasta 5 mascotas

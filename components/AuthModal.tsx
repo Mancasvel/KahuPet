@@ -38,7 +38,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         <ModalHeader className="flex flex-col gap-1">
           <div className="text-center">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Pawsitive
+              Kahupet
             </h1>
             <p className="text-sm text-gray-500">
               Tu compañero digital para el bienestar de mascotas

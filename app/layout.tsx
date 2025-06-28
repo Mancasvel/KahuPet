@@ -7,29 +7,29 @@ import { AuthProvider } from '@/lib/AuthContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Pawsitive - Bienestar personalizado para tu mascota',
-  description: 'La aplicación que comprende las necesidades de tu mascota y te ofrece recomendaciones personalizadas de entrenamiento, nutrición y bienestar usando lenguaje natural.',
+  title: 'Kahupet - Entiende a tu mascota',
+  description: 'La aplicación que entiende a tu mascota y te ofrece recomendaciones personalizadas de entrenamiento, nutrición y bienestar usando lenguaje natural.',
   keywords: ['mascotas', 'perros', 'gatos', 'entrenamiento', 'nutrición', 'bienestar animal', 'veterinario', 'cuidado mascotas'],
-  authors: [{ name: 'Pawsitive Team' }],
-  creator: 'Pawsitive',
-  publisher: 'Pawsitive',
+  authors: [{ name: 'Kahupet Team' }],
+  creator: 'Kahupet',
+  publisher: 'Kahupet',
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://pawsitive.app'),
+  metadataBase: new URL('https://kahupet.app'),
   openGraph: {
-    title: 'Pawsitive - Bienestar personalizado para tu mascota',
+    title: 'Kahupet - Entiende a tu mascota',
     description: 'Cuéntanos qué necesita tu mascota y te ayudamos con recomendaciones personalizadas de entrenamiento, nutrición y bienestar.',
-    url: 'https://pawsitive.app',
-    siteName: 'Pawsitive',
+    url: 'https://kahupet.app',
+    siteName: 'Kahupet',
     images: [
       {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Pawsitive - Bienestar para mascotas',
+        alt: 'Kahupet - Entiende a tu mascota',
       },
     ],
     locale: 'es_ES',
@@ -37,9 +37,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Pawsitive - Bienestar personalizado para tu mascota',
-    description: 'La app que comprende a tu mascota y te da recomendaciones personalizadas.',
-    creator: '@pawsitive_app',
+    title: 'Kahupet - Entiende a tu mascota',
+    description: 'La app que entiende a tu mascota y te da recomendaciones personalizadas.',
+    creator: '@kahupet_app',
     images: ['/twitter-image.jpg'],
   },
   robots: {
@@ -74,7 +74,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#3b82f6" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Pawsitive" />
+        <meta name="apple-mobile-web-app-title" content="Kahupet" />
       </head>
       <body className={inter.className}>
         <Providers>

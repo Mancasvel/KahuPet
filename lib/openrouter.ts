@@ -19,7 +19,7 @@ export async function callOpenRouter(userQuery: string, availableRecommendations
     if (availableRecommendations && availableRecommendations.length > 0) {
       recommendationsContext = `
 
-RECOMENDACIONES DISPONIBLES EN PAWSITIVE:
+RECOMENDACIONES DISPONIBLES EN KAHUPET:
 ${availableRecommendations.map(rec => `
 - ${rec.title} (${rec.breed || 'Genérico'} - ${rec.type})
   Dificultad: ${rec.difficulty}
@@ -58,7 +58,7 @@ IMPORTANTE: Como el usuario YA TIENE una mascota registrada, en la respuesta deb
 `
     }
 
-    const systemPrompt = `Eres el asistente IA de Pawsitive, una aplicación especializada en bienestar de mascotas que ayuda con entrenamiento, nutrición y vida saludable.
+    const systemPrompt = `Eres el asistente IA de Kahupet, una aplicación especializada que entiende a tu mascota y ayuda con entrenamiento, nutrición y vida saludable.
 
 Tu trabajo es:
 1. Analizar consultas sobre mascotas para entender ESPECÍFICAMENTE qué necesitan
@@ -314,7 +314,7 @@ IMPORTANTE:
       headers: {
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "HTTP-Referer": process.env.YOUR_SITE_URL || "http://localhost:3000",
-        "X-Title": process.env.YOUR_SITE_NAME || "Pawsitive",
+        "X-Title": process.env.YOUR_SITE_NAME || "Kahupet",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({

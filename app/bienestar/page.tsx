@@ -127,7 +127,7 @@ export default function BienestarPage() {
           
           <Link href="/">
             <Button className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold px-8 py-3 shadow-lg hover:shadow-xl transition-all">
-              🏠 Volver al Chat de Pawsitive
+              🏠 Volver al Chat de Kahupet
             </Button>
           </Link>
         </div>
