@@ -113,9 +113,13 @@ export function PetVoiceChat({ petVoiceResponse }: PetVoiceChatProps) {
                 <span className="text-lg">{getEmotionalIcon(petVoiceResponse.emotionalTone)}</span>
               </div>
               <div className="flex-1">
-                <p className="text-gray-800 leading-relaxed font-medium">
-                  {petVoiceResponse.voiceMessage}
-                </p>
+                <div className="text-gray-800 leading-relaxed font-medium whitespace-pre-wrap">
+                  {petVoiceResponse.voiceMessage.split('\n').map((paragraph, index) => (
+                    <p key={index} className={index > 0 ? 'mt-4' : ''}>
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

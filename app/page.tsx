@@ -75,10 +75,27 @@ export default function Home() {
     }
   }, [])
 
-  // Cargar perfiles al montar el componente
+  // Cargar la mascota registrada del usuario
+  const loadUserPet = useCallback(async () => {
+    try {
+      const response = await fetch('/api/user-pets?userId=anonymous') // Por ahora usamos anonymous
+      if (response.ok) {
+        const userPets = await response.json()
+        if (userPets.length > 0) {
+          setUserPet(userPets[0]) // Tomar la primera mascota del usuario
+          console.log('🏷️ Mascota del usuario cargada:', userPets[0])
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando mascota del usuario:', error)
+    }
+  }, [])
+
+  // Cargar perfiles y mascota del usuario al montar el componente
   useEffect(() => {
     loadAllPetProfiles()
-  }, [loadAllPetProfiles])
+    loadUserPet()
+  }, [loadAllPetProfiles, loadUserPet])
 
   const searchPetCare = async () => {
     if (!query.trim()) {
@@ -178,7 +195,8 @@ export default function Home() {
   const handlePetRegistrationSuccess = (pet: any) => {
     setUserPet(pet)
     console.log('Mascota registrada exitosamente:', pet)
-    // Aquí podrías actualizar el LLM para usar la información de la mascota
+    // Recargar la lista de mascotas del usuario
+    loadUserPet()
   }
 
   return (

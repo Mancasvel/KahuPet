@@ -52,6 +52,9 @@ IMPORTANTE: Como el usuario YA TIENE una mascota registrada, en la respuesta deb
 3. Usar "${userPet.breed}" como petBreed
 4. SIEMPRE generar un voiceMessage personalizado como si fueras ${userPet.name} (${userPet.breed}) hablando directamente a su humano
 5. Hacer referencia específica a la información de la mascota cuando sea relevante (edad, raza, características)
+6. USAR LOS DATOS ESPECÍFICOS: edad (${userPet.age} años), peso (${userPet.weight} kg), género (${userPet.gender}), notas (${userPet.notes})
+7. El voiceMessage debe ser EXTENDIDO (mínimo 3 párrafos) incluyendo información científica sobre la raza
+8. Personalizar completamente basado en la información real de ${userPet.name}
 `
     }
 
@@ -111,27 +114,43 @@ LÓGICA DE RECOMENDACIONES:
 4. Si mencionan edad: filtrar por rango de edad apropiado
 5. SIEMPRE seleccionar recomendaciones relevantes si están disponibles
 
-EJEMPLOS DE petVoiceResponse:
+EJEMPLOS DE petVoiceResponse EXTENDIDOS:
 
-TRAINING/OBEDIENCIA:
-- Issue: "ladridos excesivos" → "¡Guau! Sé que a veces ladro mucho cuando llegan visitas... es que me emociono mucho. ¿Me ayudas a aprender cuándo estar calmadito? ¡Prometo ser un buen perro! 🐕"
+TRAINING/OBEDIENCIA para Golden Retriever:
+- Issue: "ladridos excesivos" → "¡Guau guau! Soy Max y sé que tienes razón sobre mis ladridos cuando llegan visitas... 🐕 Como Golden Retriever, tengo esa naturaleza súper amigable que me hace emocionarme muchísimo cada vez que alguien nuevo viene a casa. Mi instinto de protección y mi amor por socializar se combinan de una manera que a veces no puedo controlar, ¡es como si toda mi energía de 30 kilos de amor dorado explotara de una vez!
 
-NUTRICIÓN:
-- Issue: "sobrepeso" → "Oye humano... creo que me estás dando demasiadas chuches deliciosas. Sé que me amas, pero necesito estar fuerte y saludable para jugar contigo más tiempo. ¿Me ayudas con mi dieta? 🥺"
+Sabes, a mis 2 años estoy en esa etapa donde mi cerebro de retriever está súper activo y quiero participar en todo lo que pasa en MI casa. Los Golden como yo somos conocidos por ser perros 'parlanchines' - nos encanta 'hablar' y expresar nuestras emociones. Cuando ladro, no es solo ruido, es mi manera de decirte '¡OIGAN, TENEMOS VISITAS Y ESTOY SÚPER FELIZ!' Pero entiendo que necesito aprender autocontrol, especialmente porque mi raza es famosa por ser obediente y entrenable. 🎾
 
-BIENESTAR/ABURRIMIENTO:
-- Issue: "aburrimiento" → "¡Oye! Me aburro mucho cuando te vas. Mi mente de border collie necesita trabajar, ¿sabes? ¿Podríamos hacer juegos nuevos cuando vuelvas? ¡Prometo no destruir tus zapatos! 😅"
+¿Me ayudas a canalizar esta energía de manera positiva? Podríamos usar mi amor natural por agradar y mi inteligencia para crear una rutina de saludo más calmada. Tal vez puedas enseñarme comandos específicos para cuando llegan visitas, y así puedo sentirme útil sin overwhelmar a todos con mi entusiasmo. ¡Prometo que con práctica y mucho amor, puedo convertir esta explosión de ladridos en una bienvenida más elegante y digna de un Golden! Te amo mucho, humano mío 💛"
 
-CARIÑOSO/GENERAL:
-- General: "¿Te parece si probamos juegos nuevos cuando llegues? Me encanta cuando juegas conmigo, es mi momento favorito del día. Te amo mucho, humano mío 💕"
+NUTRICIÓN para Gato Persa Senior:
+- Issue: "sobrepeso" → "Miau... humano querido, tengo que confesarte algo importante sobre mi peso. 😿 Como gato Persa de 8 años, mi metabolismo ya no es el mismo de cuando era un gatito ágil. Mi naturaleza sedentaria, que es típica de mi raza, combinada con mi amor por la comodidad y las siestas largas, ha hecho que esos gramos extra se acumulen más fácilmente de lo que me gustaría admitir. Los Persas somos conocidos por ser tranquilos y menos activos que otras razas, lo que significa que quemamos menos calorías naturalmente.
 
-REGLAS PARA voiceMessage:
-- SIEMPRE en primera persona como la mascota
-- Mencionar el issue específico si se identifica
-- Ser cariñoso y emocional 
-- Usar emojis apropiados
-- Reflejar la personalidad típica de la raza si se conoce
-- Longitud: 1-2 oraciones, directa pero cálida
+Mi pelaje largo y esponjoso también hace que sea más difícil notar los cambios de peso hasta que ya es evidente, y sé que mi cara aplastada (braquicefálica) me hace respirar con más dificultad cuando tengo peso extra. A mi edad, el sobrepeso puede empeorar problemas comunes en Persas como dificultades respiratorias, problemas articulares, y hasta complicaciones cardíacas. Mi cuerpo de tipo 'cobby' (compacto y redondeado) está diseñado para ser robusto, pero no rollizo. 🐱
+
+Por favor, ayúdame a recuperar mi figura elegante y mi salud. Podríamos ajustar mis porciones considerando que los Persas seniors como yo necesitamos menos calorías pero más proteína de calidad. También sé que necesito estimulación para moverme más, aunque sea con juegos suaves que respeten mi personalidad tranquila. Quiero vivir muchos años más a tu lado, ronroneando en tu regazo, pero con un cuerpo sano que me permita disfrutar cada momento contigo. Confío en ti para guiarme hacia una versión más saludable de mí mismo 💜"
+
+BIENESTAR para Border Collie Adulto:
+- Issue: "aburrimiento" → "¡Woof woof! ¡Soy Luna y necesito hablarte urgentemente sobre algo que está afectando mi bienestar mental! 🧠 Como Border Collie de 3 años, mi cerebro está literalmente diseñado para trabajar - fueron criados para pastorear ovejas durante 12 horas al día, resolviendo problemas complejos y tomando decisiones independientes. Mi inteligencia está clasificada como la #1 entre todas las razas de perros, y eso significa que necesito estimulación mental constante o me vuelvo loca de aburrimiento. Cuando me quedo sola sin nada que hacer, mi mente hiperactiva empieza a inventar 'trabajos' como reorganizar tus zapatos o redescorar el jardín... 😅
+
+Mi nivel de energía mental y física es EXTREMO comparado con otras razas. Mientras un Bulldog se conforma con una caminata corta, yo necesito al menos 2 horas de actividad intensa combinada con desafíos cerebrales. Mi frustración cuando no tengo suficiente estimulación puede manifestarse en comportamientos destructivos, pero no es que sea 'mala' - ¡es que mi cerebre de Border Collie necesita problemas que resolver! Sin trabajo mental, desarrollo ansiedad, y mi naturaleza obsesiva puede convertirse en comportamientos compulsivos como perseguir sombras o ladrar excesivamente. 🎾
+
+¿Podrías ayudarme a crear una rutina que alimente tanto mi cuerpo como mi mente? Necesito puzzles, juegos de agilidad mental, entrenamiento de trucos nuevos, y actividades que imiten el pastoreo. Incluso esconder mi comida para que tenga que 'trabajar' por ella me haría súper feliz. También me encantaría aprender deportes caninos como agility o frisbee - ¡mi cuerpo atlético está hecho para eso! Con el estímulo adecuado, puedo ser la compañera más leal y equilibrada. Solo dame trabajos que hacer y problemas que resolver, y serás testigo de por qué los Border Collies somos considerados los Einstein del mundo canino 🌟"
+
+REGLAS PARA voiceMessage EXTENDIDO:
+- MÍNIMO 3 PÁRRAFOS completos y detallados
+- SIEMPRE en primera persona como la mascota específica
+- Incluir información específica de la RAZA (características, temperamento, necesidades)
+- Mencionar la EDAD y cómo afecta al problema específico
+- Explicar el comportamiento desde la perspectiva de la raza
+- Usar conocimiento científico/veterinario adaptado al problema
+- Mostrar PERSONALIDAD única de la raza
+- Ser cariñoso pero informativo y educativo
+- Incluir emojis apropiados para la raza y situación
+- Proponer soluciones específicas basadas en las características de la raza
+- Longitud: 3-4 párrafos sustanciales, profundos y personalizados
+- IMPORTANTE: Usar \\n para separar párrafos en el JSON (NO saltos de línea literales)
+- FORMATO JSON: El voiceMessage debe ser una cadena válida con \\n escapados
 
 REGLA CLAVE: Si hasRegisteredPet es true, SIEMPRE generar voiceMessage. Si es false, dejar voiceMessage vacío.
 
@@ -147,7 +166,7 @@ Ejemplos:
     "hasRegisteredPet": true,
     "petName": "",
     "petBreed": "golden retriever", 
-    "voiceMessage": "¡Guau! Sé que a veces ladro mucho cuando llegan visitas... es que me emociono mucho. ¿Me ayudas a aprender cuándo estar calmadito?",
+    "voiceMessage": "¡Guau guau! Sé que tienes razón sobre mis ladridos cuando llegan visitas... 🐕 Como Golden Retriever, tengo esa naturaleza súper amigable que me hace emocionarme muchísimo cada vez que alguien nuevo viene a casa. Mi instinto de protección y mi amor por socializar se combinan de una manera que a veces no puedo controlar, ¡es como si toda mi energía de 30 kilos de amor dorado explotara de una vez!\\n\\nSabes, a mis 2 años estoy en esa etapa donde mi cerebro de retriever está súper activo y quiero participar en todo lo que pasa en MI casa. Los Golden como yo somos conocidos por ser perros 'parlanchines' - nos encanta 'hablar' y expresar nuestras emociones. Cuando ladro, no es solo ruido, es mi manera de decirte '¡OIGAN, TENEMOS VISITAS Y ESTOY SÚPER FELIZ!' Pero entiendo que necesito aprender autocontrol, especialmente porque mi raza es famosa por ser obediente y entrenable. 🎾\\n\\n¿Me ayudas a canalizar esta energía de manera positiva? Podríamos usar mi amor natural por agradar y mi inteligencia para crear una rutina de saludo más calmada. Tal vez puedas enseñarme comandos específicos para cuando llegan visitas, y así puedo sentirme útil sin overwhelmar a todos con mi entusiasmo. ¡Prometo que con práctica y mucho amor, puedo convertir esta explosión de ladridos en una bienvenida más elegante y digna de un Golden! Te amo mucho, humano mío 💛",
     "emotionalTone": "juguetón"
   }
 }
@@ -177,7 +196,7 @@ Ejemplos:
     "hasRegisteredPet": true,
     "petName": "Max",
     "petBreed": "gato",
-    "voiceMessage": "Miau... humano, tengo un problemita con mi baño. A veces el arenero no me gusta tanto... ¿me ayudas a solucionarlo? 😿",
+    "voiceMessage": "Miau... humano querido, necesito hablar contigo sobre un tema muy delicado e importante para mi bienestar diario. 😿 Como gato, mi instinto natural me dice que debo enterrar mis desechos para mantener mi territorio limpio y seguro, pero algo está interfiriendo con este comportamiento fundamental. Puede ser que la ubicación de mi caja no me dé la privacidad que necesito, o que el tipo de arena no sea compatible con la sensibilidad de mis patitas, o incluso que detecte olores de productos de limpieza que me resultan desagradables.\\n\\nMi comportamiento también puede estar relacionado con estrés, cambios en la casa, o incluso problemas de salud que no son visibles. Los gatos somos criaturas de hábitos muy específicos, y cualquier alteración en nuestro ambiente puede afectar nuestros patrones de aseo. Es importante que sepas que no estoy siendo 'malo' intencionalmente - este comportamiento es mi manera de comunicarte que algo no está bien en mi mundo felino.\\n\\n¿Podrías ayudarme revisando si mi caja está en un lugar tranquilo y accesible, si la arena está limpia y es del tipo que me gusta, y si no hay olores extraños cerca? También sería bueno que un veterinario me revise para descartar problemas de salud. Con un poco de detective work y mucho amor, estoy seguro de que podemos resolver este problema juntos y volver a mi rutina normal de gato feliz 💙",
     "emotionalTone": "preocupado"
   }
 }
@@ -229,7 +248,24 @@ IMPORTANTE:
     
     try {
       // Limpiar el contenido para extraer solo el JSON
-      const cleanContent = content.replace(/```json\s*|\s*```/g, '').trim()
+      let cleanContent = content.replace(/```json\s*|\s*```/g, '').trim()
+      
+             // Función para escapar caracteres dentro de strings JSON
+       const fixJsonStrings = (text: string) => {
+         return text.replace(/"voiceMessage"\s*:\s*"([\s\S]*?)"\s*,?\s*"emotionalTone"/gs, (match, voiceMessage) => {
+           // Escapar caracteres de control dentro del voiceMessage (orden importante)
+           const escapedMessage = voiceMessage
+             .replace(/\r\n/g, '\\n') // Windows line endings primero
+             .replace(/\n/g, '\\n')   // Unix line endings
+             .replace(/\r/g, '\\n')   // Mac line endings
+             .replace(/\t/g, '\\t')   // Tabs
+             .replace(/"/g, '\\"')    // Escapar comillas después de line endings
+           
+           return `"voiceMessage": "${escapedMessage}", "emotionalTone"`
+         })
+       }
+      
+      cleanContent = fixJsonStrings(cleanContent)
       const parsed = JSON.parse(cleanContent)
       
       // Validar estructura
@@ -303,7 +339,7 @@ function extractKeywordsFromQuery(query: string): LLMResponse {
       hasRegisteredPet,
       petName: '',
       petBreed: foundCharacteristics.find(char => char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine')) || '',
-      voiceMessage: hasRegisteredPet ? "¡Hola humano! Detecté que necesitas ayuda conmigo. ¡Estoy listo para aprender y ser la mejor mascota para ti! 🐾" : '',
+      voiceMessage: hasRegisteredPet ? "¡Hola mi querido humano! 🐾 Sé que necesitas ayuda conmigo y estoy súper emocionado de poder hablar contigo sobre lo que me preocupa. Como tu mascota registrada, quiero que sepas que cada comportamiento mío tiene una razón, y juntos podemos encontrar la mejor solución.\\n\\nMi instinto me dice que confianza y amor son la base de nuestra relación, y estoy dispuesto a aprender y mejorar todo lo que necesite para ser tu compañero perfecto. Cada raza tiene sus propias características especiales, y me encanta poder compartir contigo qué hace que mi personalidad sea única.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío y fortalecer nuestro vínculo. ¡Eres el mejor humano que podría tener! 💕" : '',
       emotionalTone: hasRegisteredPet ? 'emocionado' : ''
     }
   }
