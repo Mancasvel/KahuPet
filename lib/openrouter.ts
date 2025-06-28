@@ -12,7 +12,7 @@ interface LLMResponse {
   }
 }
 
-export async function callOpenRouter(userQuery: string, availableRecommendations?: any[], userPet?: any): Promise<LLMResponse | null> {
+export async function callOpenRouter(userQuery: string, availableRecommendations?: any[], userPet?: any, conversationHistory?: any[]): Promise<LLMResponse | null> {
   try {
     // Construir contexto de recomendaciones disponibles si se proporciona
     let recommendationsContext = ""
@@ -58,7 +58,31 @@ IMPORTANTE: Como el usuario YA TIENE una mascota registrada, en la respuesta deb
 `
     }
 
+    // Construir contexto de historial de conversación
+    let conversationContext = ''
+    if (conversationHistory && conversationHistory.length > 0) {
+      conversationContext = `
+HISTORIAL DE CONVERSACIÓN PREVIO:
+${conversationHistory.map((msg, index) => {
+  const role = msg.type === 'user' ? 'HUMANO' : (userPet ? userPet.nombre.toUpperCase() : 'ASISTENTE')
+  return `${index + 1}. ${role}: ${msg.content}`
+}).join('\n')}
+
+CONTEXTO: Esta es una conversación continua. Mantén la coherencia con los mensajes anteriores y haz referencia a información previa cuando sea relevante. Si el usuario menciona algo que ya discutieron, reconócelo. Si hay un problema en curso, continúa trabajando en él.
+
+INSTRUCCIONES PARA CONTINUIDAD:
+- Si ya identificaste problemas específicos en mensajes anteriores, continúa trabajando en ellos
+- Si el usuario hace preguntas de seguimiento, bástalas en el contexto previo
+- Mantén la personalidad consistente de la mascota a lo largo de la conversación
+- Si hay información contradictoria, pregunta para clarificar
+- Haz referencia a soluciones o consejos previos cuando sea apropiado
+
+`
+    }
+
     const systemPrompt = `Eres el asistente IA de Kahupet, una aplicación especializada que entiende a tu mascota y ayuda con entrenamiento, nutrición y vida saludable.
+
+${conversationContext}
 
 Tu trabajo es:
 1. Analizar consultas sobre mascotas para entender ESPECÍFICAMENTE qué necesitan
@@ -324,6 +348,11 @@ IMPORTANTE:
             role: "system",
             content: systemPrompt
           },
+          // Incluir historial de conversación si existe
+          ...(conversationHistory || []).map(msg => ({
+            role: msg.type === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          })),
           {
             role: "user",
             content: userQuery
@@ -348,44 +377,74 @@ IMPORTANTE:
     const content = data.choices[0].message.content
     
     try {
-      // Limpiar el contenido de manera más robusta
-      let cleanContent = content
-        // Remover bloques de código JSON
-        .replace(/```json\s*|\s*```/g, '')
-        // Remover caracteres invisibles al inicio y final
-        .replace(/^[\s\uFEFF\xA0\u200B\u2060\u2028\u2029]+|[\s\uFEFF\xA0\u200B\u2060\u2028\u2029]+$/g, '')
-        // Remover cualquier texto antes del primer '{'
-        .replace(/^[^{]*/, '')
-        // Remover cualquier texto después del último '}'
-        .replace(/[^}]*$/, '')
+      // Paso 1: Extraer solo el JSON del contenido
+      let jsonText = content
+        .replace(/^[\s\S]*?(?=\{)/, '')  // Todo antes del primer {
+        .replace(/\}[\s\S]*$/, '}')      // Todo después del último }
         .trim()
       
-      console.log('🔍 Contenido limpio para parsing:', cleanContent.substring(0, 100) + '...')
-      console.log('🔍 Primer carácter código:', cleanContent.charCodeAt(0))
-      console.log('🔍 Último carácter código:', cleanContent.charCodeAt(cleanContent.length - 1))
+      if (!jsonText.startsWith('{') || !jsonText.endsWith('}')) {
+        throw new Error('No se encontró JSON válido')
+      }
       
-      // Función para escapar caracteres dentro de strings JSON
-      const fixJsonStrings = (text: string) => {
-        // Escapar caracteres de control comunes que pueden romper el JSON
-        let fixedText = text
-          .replace(/\r\n/g, '\\n') // Windows line endings
-          .replace(/\n/g, '\\n')   // Unix line endings  
-          .replace(/\r/g, '\\n')   // Mac line endings
-          .replace(/\t/g, '\\t')   // Tabs
-          .replace(/\f/g, '\\f')   // Form feed
-          .replace(/\b/g, '\\b')   // Backspace
+      // Paso 2: Arreglar caracteres problemáticos de manera simple pero efectiva
+      jsonText = jsonText
+        // Remover caracteres BOM y espacios de ancho cero
+        .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '')
+        // Normalizar todos los tipos de comillas
+        .replace(/[""'']/g, '"')
+        // Remover caracteres de control peligrosos (excepto \n, \r, \t que manejaremos después)
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      
+      // Paso 3: Arreglar saltos de línea y caracteres especiales DENTRO de strings JSON
+      // Esto es más seguro que regex complejos - procesamos caracter por caracter
+      let fixedJson = ''
+      let insideString = false
+      let escapeNext = false
+      
+      for (let i = 0; i < jsonText.length; i++) {
+        const char = jsonText[i]
+        const nextChar = jsonText[i + 1]
         
-        return fixedText
+        if (escapeNext) {
+          // Si el carácter anterior era \, mantener este carácter tal como está
+          fixedJson += char
+          escapeNext = false
+        } else if (char === '\\') {
+          // Marcar que el siguiente carácter está escapado
+          fixedJson += char
+          escapeNext = true
+        } else if (char === '"') {
+          // Alternar estado de dentro/fuera de string
+          fixedJson += char
+          insideString = !insideString
+        } else if (insideString) {
+          // Estamos dentro de un string JSON, necesitamos escapar caracteres especiales
+          if (char === '\n') {
+            fixedJson += '\\n'
+          } else if (char === '\r') {
+            fixedJson += '\\r'
+          } else if (char === '\t') {
+            fixedJson += '\\t'
+          } else {
+            fixedJson += char
+          }
+        } else {
+          // Fuera de strings, mantener tal como está
+          fixedJson += char
+        }
       }
       
-      cleanContent = fixJsonStrings(cleanContent)
+      // Paso 4: Limpieza final
+      fixedJson = fixedJson
+        .replace(/\s+/g, ' ')  // Normalizar espacios múltiples
+        .replace(/\s*:\s*/g, ': ')  // Normalizar espacios alrededor de :
+        .replace(/\s*,\s*/g, ', ')  // Normalizar espacios alrededor de ,
+        .trim()
       
-      // Verificar que tenemos un JSON válido antes de hacer parse
-      if (!cleanContent.startsWith('{') || !cleanContent.endsWith('}')) {
-        throw new Error('Contenido no parece ser JSON válido')
-      }
+      console.log('🔧 JSON arreglado:', fixedJson.substring(0, 400) + '...')
       
-      const parsed = JSON.parse(cleanContent)
+      const parsed = JSON.parse(fixedJson)
       
       // Validar estructura
       const result: LLMResponse = {
@@ -415,13 +474,22 @@ IMPORTANTE:
       console.error('📝 Raw content preview:', content.substring(0, 200))
       console.error('📝 Raw content ending:', content.substring(content.length - 200))
       
-      // Intentar parsing manual más simple
+      // Intentar parsing manual más simple con múltiples estrategias
       try {
-        // Buscar patrón JSON manualmente
+        // Estrategia 1: Buscar patrón JSON manualmente
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          console.log('🔧 Intentando parsing manual...')
-          const manualParsed = JSON.parse(jsonMatch[0])
+          console.log('🔧 Intentando parsing manual - estrategia 1...')
+          let jsonString = jsonMatch[0]
+          
+          // Limpiar agresivamente el JSON encontrado
+          jsonString = jsonString
+            .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '') // BOM y espacios invisibles
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // caracteres de control
+            .replace(/[""'']/g, '"') // comillas problemáticas
+            .trim()
+          
+          const manualParsed = JSON.parse(jsonString)
           console.log('✅ Parsing manual exitoso!')
           
           // Validar estructura manualmente
@@ -447,97 +515,235 @@ IMPORTANTE:
           
           return result
         }
+        
+        // Estrategia 2: Buscar por líneas y reconstruir
+        console.log('🔧 Intentando parsing manual - estrategia 2...')
+        const lines = content.split('\n')
+        const jsonLines = []
+        let inJson = false
+        
+        for (const line of lines) {
+          const trimmedLine = line.trim()
+          if (trimmedLine.startsWith('{')) {
+            inJson = true
+          }
+          if (inJson) {
+            jsonLines.push(trimmedLine)
+          }
+          if (trimmedLine.endsWith('}') && inJson) {
+            break
+          }
+        }
+        
+        if (jsonLines.length > 0) {
+          const reconstructedJson = jsonLines.join('')
+            .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '')
+            .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+            .replace(/[""'']/g, '"')
+          
+          const manualParsed2 = JSON.parse(reconstructedJson)
+          console.log('✅ Reconstrucción manual exitosa!')
+          
+          const result: LLMResponse = {
+            petCharacteristics: Array.isArray(manualParsed2.petCharacteristics) ? manualParsed2.petCharacteristics : [],
+            issues: Array.isArray(manualParsed2.issues) ? manualParsed2.issues : [],
+            recommendationTypes: Array.isArray(manualParsed2.recommendationTypes) ? manualParsed2.recommendationTypes : [],
+            specificRecommendations: Array.isArray(manualParsed2.specificRecommendations) ? manualParsed2.specificRecommendations : [],
+            petVoiceResponse: manualParsed2.petVoiceResponse ? {
+              hasRegisteredPet: typeof manualParsed2.petVoiceResponse.hasRegisteredPet === 'boolean' ? manualParsed2.petVoiceResponse.hasRegisteredPet : false,
+              petName: typeof manualParsed2.petVoiceResponse.petName === 'string' ? manualParsed2.petVoiceResponse.petName : '',
+              petBreed: typeof manualParsed2.petVoiceResponse.petBreed === 'string' ? manualParsed2.petVoiceResponse.petBreed : '',
+              voiceMessage: typeof manualParsed2.petVoiceResponse.voiceMessage === 'string' ? manualParsed2.petVoiceResponse.voiceMessage : '',
+              emotionalTone: typeof manualParsed2.petVoiceResponse.emotionalTone === 'string' ? manualParsed2.petVoiceResponse.emotionalTone : ''
+            } : {
+              hasRegisteredPet: false,
+              petName: '',
+              petBreed: '',
+              voiceMessage: '',
+              emotionalTone: ''
+            }
+          }
+          
+          return result
+        }
+        
       } catch (manualError) {
         console.error('❌ Parsing manual también falló:', manualError)
       }
       
       // Fallback: crear respuesta basada en palabras clave
       console.log('🔄 Usando fallback con palabras clave...')
-      return extractKeywordsFromQuery(userQuery, userPet)
+      return extractKeywordsFromQuery(userQuery, userPet, conversationHistory)
     }
 
   } catch (error) {
     console.error('Error calling OpenRouter:', error)
-    return extractKeywordsFromQuery(userQuery, userPet)
+    return extractKeywordsFromQuery(userQuery, userPet, conversationHistory)
   }
 }
 
+// Función helper para obtener el plural correcto de las razas
+function getPetBreedPlural(breed: string, petType: string): string {
+  if (!breed) return petType === 'gato' ? 'gatos' : 'perros'
+  
+  const breedLower = breed.toLowerCase()
+  
+  // Casos especiales comunes
+  if (breedLower.includes('europeo')) return breed.replace(/europeo/i, 'europeos')
+  if (breedLower.includes('persa')) return breed.replace(/persa/i, 'persas')  
+  if (breedLower.includes('siamés')) return breed.replace(/siamés/i, 'siameses')
+  if (breedLower.includes('maine coon')) return breed + 's'
+  if (breedLower.includes('retriever')) return breed + 's'
+  if (breedLower.includes('pastor')) return breed + 'es'
+  if (breedLower.includes('collie')) return breed + 's'
+  if (breedLower.includes('bulldog')) return breed + 's'
+  
+  // Reglas generales
+  if (breed.endsWith('o')) return breed.slice(0, -1) + 'os'
+  if (breed.endsWith('a')) return breed.slice(0, -1) + 'as'
+  if (breed.endsWith('í')) return breed + 'es'
+  if (breed.endsWith('z')) return breed.slice(0, -1) + 'ces'
+  
+  // Por defecto, agregar 's'
+  return breed + 's'
+}
+
 // Función de fallback para extraer palabras clave sin LLM
-function extractKeywordsFromQuery(query: string, userPet?: any): LLMResponse {
+function extractKeywordsFromQuery(query: string, userPet?: any, conversationHistory?: any[]): LLMResponse {
   const lowerQuery = query.toLowerCase()
   
-  const commonPetCharacteristics = ['perro', 'gato', 'cachorro', 'gatito', 'adulto', 'senior', 'golden retriever', 'border collie', 'bulldog francés', 'persa', 'maine coon']
-  const commonIssues = ['ladridos', 'ansiedad', 'sobrepeso', 'aburrimiento', 'agresividad', 'destructivo', 'caja de arena', 'pelo', 'alergias']
-  const commonTypes = ['training', 'nutrition', 'wellness']
-  
-  const foundCharacteristics = commonPetCharacteristics.filter(char => 
-    lowerQuery.includes(char.toLowerCase())
-  )
-  
-  const foundIssues = commonIssues.filter(issue => 
-    lowerQuery.includes(issue.toLowerCase())
-  )
-  
-  const foundTypes = commonTypes.filter(type => {
-    if (type === 'training') return lowerQuery.includes('entrenar') || lowerQuery.includes('obediencia') || lowerQuery.includes('comportamiento')
-    if (type === 'nutrition') return lowerQuery.includes('comida') || lowerQuery.includes('alimentar') || lowerQuery.includes('dieta')
-    if (type === 'wellness') return lowerQuery.includes('ejercicio') || lowerQuery.includes('jugar') || lowerQuery.includes('salud')
-    return false
-  })
-  
-  // Detectar si tiene mascota registrada basado en userPet o pronombres posesivos
-  const hasRegisteredPet = !!userPet || (lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota')))
-  
-  // Determinar estado emocional basado en el tipo de consulta
-  let emotionalTone = ''
-  if (hasRegisteredPet) {
-    if (lowerQuery.includes('ladridos') || lowerQuery.includes('destructivo') || lowerQuery.includes('mal comportamiento')) {
-      emotionalTone = 'confundido'
-    } else if (lowerQuery.includes('triste') || lowerQuery.includes('enfermo') || lowerQuery.includes('dolor')) {
-      emotionalTone = 'triste'
-    } else if (lowerQuery.includes('caja de arena') || lowerQuery.includes('accidente') || lowerQuery.includes('orinó')) {
-      emotionalTone = 'culpable'
-    } else if (lowerQuery.includes('ejercicio') || lowerQuery.includes('jugar') || lowerQuery.includes('correr')) {
-      emotionalTone = 'emocionado'
-    } else if (lowerQuery.includes('comida') || lowerQuery.includes('hambre') || lowerQuery.includes('alimentar')) {
-      emotionalTone = 'curioso'
-    } else if (lowerQuery.includes('miedo') || lowerQuery.includes('ansiedad') || lowerQuery.includes('nervioso')) {
-      emotionalTone = 'ansioso'
-    } else if (lowerQuery.includes('aprendió') || lowerQuery.includes('entrenamiento') || lowerQuery.includes('comando')) {
-      emotionalTone = 'orgulloso'
-    } else {
-      emotionalTone = 'feliz'
-    }
+  // Detectar temas específicos en la pregunta
+  const queryAnalysis = {
+    isAboutFood: lowerQuery.includes('come') || lowerQuery.includes('comida') || lowerQuery.includes('alimenta') || lowerQuery.includes('hambre') || lowerQuery.includes('pienso') || lowerQuery.includes('dieta'),
+    isAboutBehavior: lowerQuery.includes('ladra') || lowerQuery.includes('ladrido') || lowerQuery.includes('comporta') || lowerQuery.includes('obedece') || lowerQuery.includes('agresiv') || lowerQuery.includes('destructiv'),
+    isAboutSounds: lowerQuery.includes('maull') || lowerQuery.includes('ruido') || lowerQuery.includes('vocal') || lowerQuery.includes('grita') || lowerQuery.includes('chilla'),
+    isAboutHealth: lowerQuery.includes('enferm') || lowerQuery.includes('dolor') || lowerQuery.includes('mal') || lowerQuery.includes('síntoma') || lowerQuery.includes('veterinario') || lowerQuery.includes('salud'),
+    isAboutMood: lowerQuery.includes('triste') || lowerQuery.includes('decaído') || lowerQuery.includes('deprim') || lowerQuery.includes('feliz') || lowerQuery.includes('alegr') || lowerQuery.includes('ánimo'),
+    isAboutExercise: lowerQuery.includes('ejercicio') || lowerQuery.includes('juega') || lowerQuery.includes('pasea') || lowerQuery.includes('corr') || lowerQuery.includes('actividad') || lowerQuery.includes('camina'),
+    isAboutTraining: lowerQuery.includes('entrena') || lowerQuery.includes('enseña') || lowerQuery.includes('aprend') || lowerQuery.includes('comando') || lowerQuery.includes('obediencia'),
+    isAboutLitterBox: lowerQuery.includes('caja de arena') || lowerQuery.includes('baño') || lowerQuery.includes('orin') || lowerQuery.includes('hace pis') || lowerQuery.includes('accidente'),
+    isAboutGrooming: lowerQuery.includes('pelo') || lowerQuery.includes('cepill') || lowerQuery.includes('baña') || lowerQuery.includes('lava') || lowerQuery.includes('aseo') || lowerQuery.includes('limpia'),
+    isAboutSleep: lowerQuery.includes('duerme') || lowerQuery.includes('sueño') || lowerQuery.includes('descanso') || lowerQuery.includes('cama') || lowerQuery.includes('noche')
   }
   
-  // Usar información de la mascota registrada si está disponible
-  const petName = userPet ? userPet.nombre : ''
-  const petBreed = userPet ? userPet.raza : foundCharacteristics.find(char => char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine')) || ''
+  // Determinar características y problemas basados en el análisis
+  const foundCharacteristics = []
+  const foundIssues = []
+  const foundTypes = []
   
-  // Crear mensaje personalizado basado en la mascota registrada
+  if (userPet) {
+    // Formatear edad correctamente
+    const age = userPet.edad
+    const ageText = typeof age === 'number' 
+      ? `${age} ${age === 1 ? 'año' : 'años'}`
+      : age.toString().includes('año') 
+        ? age.toString()
+        : `${age} ${age === '1' || age === 1 ? 'año' : 'años'}`
+    
+    foundCharacteristics.push(userPet.tipo, userPet.raza, ageText)
+  }
+  
+  // Agregar issues específicos basados en el análisis
+  if (queryAnalysis.isAboutFood) {
+    foundIssues.push('alimentación', 'dieta')
+    foundTypes.push('nutrition')
+  }
+  if (queryAnalysis.isAboutBehavior) {
+    foundIssues.push('comportamiento', 'entrenamiento')
+    foundTypes.push('training')
+  }
+  if (queryAnalysis.isAboutSounds) {
+    foundIssues.push('vocalización', 'comunicación')
+    foundTypes.push('training')
+  }
+  if (queryAnalysis.isAboutHealth) {
+    foundIssues.push('salud', 'bienestar')
+    foundTypes.push('wellness')
+  }
+  if (queryAnalysis.isAboutMood) {
+    foundIssues.push('bienestar emocional')
+    foundTypes.push('wellness')
+  }
+  if (queryAnalysis.isAboutExercise) {
+    foundIssues.push('ejercicio', 'actividad física')
+    foundTypes.push('wellness')
+  }
+  if (queryAnalysis.isAboutTraining) {
+    foundIssues.push('entrenamiento', 'obediencia')
+    foundTypes.push('training')
+  }
+  
+  // Detectar si tiene mascota registrada
+  const hasRegisteredPet = !!userPet || (lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota')))
+  
+  // Generar respuesta ESPECÍFICA y DIRECTA basada en el tema detectado
   let voiceMessage = ''
+  let emotionalTone = 'curioso'
+  
   if (hasRegisteredPet && userPet) {
-    // Detectar el problema específico para el mensaje
-    if (lowerQuery.includes('triste') || lowerQuery.includes('tristeza')) {
-      voiceMessage = `¡Hola mi querido humano! Soy ${userPet.nombre} y quiero hablarte sobre cómo me siento últimamente. 😔 Como ${userPet.raza} de ${userPet.edad} años, a veces tengo días donde mi energía no es la misma y me siento un poco melancólico.\\n\\nMi instinto me dice que necesito más tiempo contigo y tal vez algunos ajustes en mi rutina para sentirme mejor. A mi edad y con mis características de raza, es normal tener momentos así, pero sé que juntos podemos encontrar maneras de alegrar mis días.\\n\\n¿Podrías pasar más tiempo conmigo y tal vez consultar con el veterinario? Con tu amor y cuidado, estoy seguro de que pronto volveré a ser el ${userPet.nombre} feliz que conoces. Te amo mucho 💕`
-    } else {
-      voiceMessage = `¡Hola mi querido humano! Soy ${userPet.nombre}, tu ${userPet.raza} de ${userPet.edad} años, y quiero hablar contigo sobre esto que me preocupa. 🐾 Como tu mascota registrada, confío completamente en ti para ayudarme con cualquier desafío que tengamos.\\n\\nMi personalidad de ${userPet.raza} hace que tenga ciertas necesidades específicas, y estoy seguro de que entiendes mi comportamiento mejor que nadie. Con ${userPet.edad} años, he aprendido que la comunicación contigo es la clave para resolver cualquier problema.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío. ¡Eres el mejor humano que ${userPet.nombre} podría tener! 💕`
+    const petName = userPet.nombre
+    const petType = userPet.tipo
+    const petBreed = userPet.raza
+    const petAge = typeof userPet.edad === 'number' 
+      ? `${userPet.edad} ${userPet.edad === 1 ? 'año' : 'años'}`
+      : userPet.edad.toString().includes('año') 
+        ? userPet.edad.toString()
+        : `${userPet.edad} ${userPet.edad === '1' || userPet.edad === 1 ? 'año' : 'años'}`
+    const petBreedPlural = getPetBreedPlural(petBreed, petType)
+    
+    // Respuestas específicas y directas por tema
+    if (queryAnalysis.isAboutFood) {
+      emotionalTone = 'hambriento'
+      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName} y veo que preguntas sobre mi alimentación. 🍽️ Como ${petBreed} de ${petAge}, mi relación con la comida puede tener varias explicaciones:\\n\\n• **Si pido comida constantemente:** Puede ser que mis porciones actuales no sean suficientes para mi peso y edad, o que la calidad del alimento no me esté saciando.\\n• **Si rechazo la comida:** Podría ser aburrimiento con el sabor, problemas dentales, o incluso estrés.\\n• **Si como muy rápido:** Es instinto de supervivencia, pero puedo necesitar un comedero especial.\\n\\n**Mi recomendación específica:** Revisa si mis porciones son correctas para ${petAge} y mi peso actual. Los ${petBreedPlural} tenemos necesidades nutricionales particulares. Si el problema persiste, una visita al veterinario sería ideal para descartar problemas de salud. 🏥`
+    } 
+    else if (queryAnalysis.isAboutSounds && petType === 'gato') {
+      emotionalTone = 'comunicativo'
+      voiceMessage = `¡Miau miau! Soy ${petName} y necesito explicarte mis vocalizaciones. 😸 Como ${petBreed} de ${petAge}, cada maullido tiene un significado:\\n\\n• **Maullidos cortos:** "¡Hola!" o pido atención\\n• **Maullidos largos:** Tengo una necesidad urgente (hambre, baño limpio)\\n• **Maullidos por la noche:** Puede ser ansiedad, soledad, o rutina alterada\\n• **Maullidos cerca de ti:** Quiero comunicarte algo específico\\n\\n**Razones comunes a mi edad:** A ${petAge}, podría maullar más por cambios en mi salud (hipotiroidismo, presión alta), dolor articular, o simplemente porque he aprendido que así consigo lo que quiero.\\n\\n**Qué puedes hacer:** Observa CUÁNDO maullo más y QUÉ consigo después. Si es por las noches, necesito más estimulación durante el día. 🌙`
     }
-  } else if (hasRegisteredPet) {
-    voiceMessage = "¡Hola mi querido humano! 🐾 Sé que necesitas ayuda conmigo y estoy súper emocionado de poder hablar contigo sobre lo que me preocupa. Como tu mascota registrada, quiero que sepas que cada comportamiento mío tiene una razón, y juntos podemos encontrar la mejor solución.\\n\\nMi instinto me dice que confianza y amor son la base de nuestra relación, y estoy dispuesto a aprender y mejorar todo lo que necesite para ser tu compañero perfecto. Cada raza tiene sus propias características especiales, y me encanta poder compartir contigo qué hace que mi personalidad sea única.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío y fortalecer nuestro vínculo. ¡Eres el mejor humano que podría tener! 💕"
+    else if (queryAnalysis.isAboutBehavior && petType === 'perro') {
+      emotionalTone = 'confundido'
+      voiceMessage = `¡Guau! Soy ${petName} y creo que mi comportamiento te está preocupando. 🐕 Como ${petBreed} de ${petAge}, mis acciones siempre tienen una razón:\\n\\n• **Si ladro mucho:** Puede ser aburrimiento, ansiedad, territorialidad, o necesidad de atención\\n• **Si soy destructivo:** Falta de ejercicio mental y físico, ansiedad por separación\\n• **Si no obedezco:** Necesito refuerzo consistente del entrenamiento\\n\\n**Específico para mi raza ${petBreed}:** Los ${petBreedPlural} tenemos características particulares de energía y necesidades mentales. A ${petAge}, mi nivel de actividad debe estar balanceado.\\n\\n**Plan de acción directo:** \\n1. Aumenta mi ejercicio diario (adaptado a mi edad)\\n2. Dame juguetes mentales\\n3. Refuerza comandos básicos con premios\\n4. Mantén rutinas consistentes\\n\\n¿Cuál de estos comportamientos específicos te preocupa más? 🎾`
+    }
+    else if (queryAnalysis.isAboutHealth) {
+      emotionalTone = 'preocupado'
+      voiceMessage = `${petType === 'gato' ? 'Miau...' : 'Guau...'} Soy ${petName} y entiendo tu preocupación por mi salud. 😟 Como ${petBreed} de ${petAge}, es importante que sepas:\\n\\n**Señales que requieren atención veterinaria inmediata:**\\n• Cambios en apetito o agua\\n• Letargo inusual\\n• Vómitos o diarrea persistente\\n• Dificultad para respirar\\n• Cambios en comportamiento súbitos\\n\\n**A mi edad de ${petAge}:** Debo tener chequeos regulares cada 6-12 meses. Los ${petBreedPlural} pueden tener predisposiciones genéticas específicas que debemos monitorear.\\n\\n**Si notas algo específico:** Anota cuándo ocurre, frecuencia, y circunstancias. Esta información es invaluable para el veterinario.\\n\\n¿Hay algún síntoma específico que has notado? Mi salud es prioridad y actuar rápido siempre es mejor. 🏥💕`
+    }
+    else if (queryAnalysis.isAboutExercise) {
+      emotionalTone = 'emocionado'
+      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'} guau! Soy ${petName} ¡y me ENCANTA hablar de ejercicio! 🎾 Como ${petBreed} de ${petAge}, tengo necesidades específicas:\\n\\n**Para mi raza ${petBreed}:**\\n• Los ${petBreedPlural} tenemos un nivel de energía natural particular\\n• Ejercicios que disfrutamos naturalmente\\n• Consideraciones especiales por estructura física\\n\\n**A mi edad de ${petAge}:**\\n• ${typeof userPet.edad === 'number' && userPet.edad < 2 ? 'Necesito mucha energía pero cuidando mis articulaciones en crecimiento' : typeof userPet.edad === 'number' && userPet.edad < 7 ? 'Estoy en mi mejor momento físico' : 'Necesito ejercicio adaptado, menos intenso pero constante'}\\n\\n**Plan de ejercicio ideal:**\\n${petType === 'perro' ? '• Caminatas diarias adaptadas a mi resistencia\\n• Juegos de buscar y traer\\n• Natación si es posible (excelente para articulaciones)' : '• Juguetes interactivos y de caza\\n• Rascadores y estructuras para escalar\\n• Sesiones de juego de 10-15 minutos varias veces al día'}\\n\\n¿Quieres que planifiquemos una rutina específica? ¡Estoy listo para la aventura! 🌟`
+    }
+         else if (queryAnalysis.isAboutTraining) {
+       emotionalTone = 'listo para aprender'
+       voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName} y me emociona que hablemos sobre mi entrenamiento. 🎓 Como ${petBreed} de ${petAge}, tengo capacidades específicas para aprender:\\n\\n**Para ${petType}s de mi raza:**\\n• ${petType === 'perro' ? 'Los perros como yo aprendemos mejor con refuerzo positivo y rutinas consistentes' : 'Los gatos aprendemos a través de motivación y respeto a nuestros instintos naturales'}\\n• Mi edad de ${petAge} significa que ${typeof userPet.edad === 'number' && userPet.edad < 2 ? 'estoy en la etapa perfecta para aprender comandos básicos' : typeof userPet.edad === 'number' && userPet.edad < 7 ? 'puedo aprender comandos complejos y trucos avanzados' : 'puedo seguir aprendiendo, aunque necesito más paciencia'}\\n\\n**Comandos esenciales para empezar:**\\n${petType === 'perro' ? '• "Sit" y "Stay" - fundamentales\\n• "Come" - crucial para seguridad\\n• "Down" - para relajación\\n• "Leave it" - muy importante' : '• Responder al nombre\\n• Venir cuando se llama\\n• Usar el rascador\\n• Respetar límites de espacios'}\\n\\n**Mi consejo:** Sesiones cortas (5-10 minutos), premios que realmente me motiven, y mucha paciencia. ¡Estoy listo para aprender contigo! 📚`
+     }
+     else if (queryAnalysis.isAboutMood) {
+       emotionalTone = 'reflexivo'
+       voiceMessage = `${petType === 'gato' ? 'Miau...' : 'Guau...'} Soy ${petName} y quiero hablarte sobre cómo me siento. 💭 Como ${petBreed} de ${petAge}, mis emociones pueden cambiar por varias razones:\\n\\n**Si estoy triste o decaído:**\\n• Cambios en la rutina familiar\\n• Menos tiempo contigo\\n• Problemas de salud no detectados\\n• Falta de estimulación mental\\n• Cambios de estación o clima\\n\\n**Si estoy más feliz o energético de lo normal:**\\n• Nuevos estímulos interesantes\\n• Más atención y juegos\\n• Mejor alimentación\\n• Rutina de ejercicio adecuada\\n\\n**A mi edad específica:** Los ${petType}s de ${petAge} ${typeof userPet.edad === 'number' && userPet.edad < 3 ? 'podemos tener cambios de humor por crecimiento y desarrollo' : typeof userPet.edad === 'number' && userPet.edad < 8 ? 'generalmente somos emocionalmente estables si nuestras necesidades están cubiertas' : 'podemos necesitar más cuidados especiales que afectan nuestro bienestar emocional'}.\\n\\n**Mi recomendación:** Observa qué cambió en mi ambiente cuando notaste el cambio de humor. ¡Y recuerda que a veces solo necesito más mimos! 🤗`
+     }
+     else if (queryAnalysis.isAboutLitterBox && petType === 'gato') {
+       emotionalTone = 'culpable'
+       voiceMessage = `Miau... Soy ${petName} y necesito explicarte sobre mis problemas con la caja de arena. 😿 Como ${petBreed} de ${petAge}, esto es muy importante para mí:\\n\\n**Razones por las que podría evitar mi caja:**\\n• Está muy sucia (los gatos somos muy limpios)\\n• No me gusta el tipo de arena nuevo\\n• La caja está en un lugar muy ruidoso o transitado\\n• Tengo problemas de salud (infección urinaria, dolor)\\n• Estrés por cambios en casa\\n• La caja es muy pequeña para mi tamaño\\n\\n**Reglas importantes de mi caja:**\\n• Límpiala diariamente (¡es esencial!)\\n• Una caja por gato + una extra\\n• Arena sin perfumes fuertes\\n• Ubicación tranquila pero accesible\\n\\n**Si es urgente:** Si orino fuera de la caja con frecuencia, podría ser una infección urinaria. ¡Por favor llévame al veterinario pronto! A mi edad, es importante descartar problemas médicos. No lo hago para molestarte, ¡prometo! 🙏`
+     }
+    else {
+      // Respuesta directa pidiendo especificidad 
+      emotionalTone = 'curioso'
+      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName}, tu ${petBreed} de ${petAge}. 🐾 Veo que tienes una pregunta para mí, pero necesito que seas más específico para darte la mejor respuesta.\\n\\n**¿Tu pregunta es sobre:**\\n• 🍽️ Mi alimentación o hábitos de comida\\n• 🗣️ Mis vocalizaciones o ruidos\\n• 🎾 Ejercicio y actividades\\n• 😔 Mi estado de ánimo o comportamiento\\n• 🏥 Mi salud o síntomas físicos\\n• 🏠 Problemas en casa (baño, destructividad, etc.)\\n\\n**Como ${petBreed} de ${petAge},** tengo características específicas de mi raza y edad que influyen en todo lo que hago. Cuéntame exactamente qué te preocupa y te daré una respuesta detallada y útil.\\n\\n¡Estoy aquí para ayudarte a entenderme mejor! 💕`
+    }
+  } else {
+    voiceMessage = "¡Hola! 🐾 Me encanta que quieras saber más sobre el comportamiento de las mascotas. Para darte la mejor respuesta, ¿podrías contarme más detalles sobre tu pregunta específica? Cada situación es única y me gustaría ayudarte de la manera más precisa posible."
   }
   
   return {
     petCharacteristics: foundCharacteristics,
     issues: foundIssues,
-    recommendationTypes: foundTypes.length > 0 ? foundTypes : ['training'],
+    recommendationTypes: foundTypes.length > 0 ? foundTypes : ['wellness'],
     specificRecommendations: [],
     petVoiceResponse: {
-      hasRegisteredPet,
-      petName,
-      petBreed,
-      voiceMessage,
-      emotionalTone
+      hasRegisteredPet: hasRegisteredPet,
+      petName: userPet?.nombre || '',
+      petBreed: userPet?.raza || '',
+      voiceMessage: voiceMessage,
+      emotionalTone: emotionalTone
     }
   }
-} 
+}

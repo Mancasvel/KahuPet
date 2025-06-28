@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MongoClient } from 'mongodb'
 import { callOpenRouter } from '@/lib/openrouter'
+import { 
+  getConversationHistory, 
+  saveConversationExchange,
+  ConversationMessage 
+} from '@/lib/conversations'
 
 // Verificar que las variables de entorno estén configuradas
 if (!process.env.MONGODB_URI) {
@@ -18,15 +23,87 @@ const client = process.env.MONGODB_URI ? new MongoClient(process.env.MONGODB_URI
 
 export async function POST(request: NextRequest) {
   try {
-    const { query, userPet } = await request.json()
+    const requestBody = await request.json()
+    const { query, userPet, userId, sessionId, conversationHistory } = requestBody
 
     if (!query) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
-    console.log('🐾 Consulta recibida:', query)
-    if (userPet) {
-      console.log('🏷️ Mascota registrada:', userPet.nombre, '(', userPet.raza, ')')
+    // Modo de retrocompatibilidad: si no hay userId/sessionId pero sí conversationHistory, generar sessionId temporal
+    let finalUserId = userId
+    let finalSessionId = sessionId
+
+    if (!userId && !sessionId) {
+      if (conversationHistory) {
+        // Modo compatibilidad: generar sessionId temporal
+        finalSessionId = 'temp_session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+        console.log('🔄 Modo compatibilidad: generando sessionId temporal:', finalSessionId)
+      } else {
+        return NextResponse.json({ error: 'userId or sessionId is required' }, { status: 400 })
+      }
+    }
+
+    const conversationId = { userId: finalUserId, sessionId: finalSessionId }
+    
+    console.log('🔍 Consulta recibida:', query)
+    console.log('🐾 Mascota del usuario:', userPet ? `${userPet.nombre} (${userPet.tipo} - ${userPet.raza})` : 'No registrada')
+    console.log('👤 ID de conversación:', finalUserId ? `userId: ${finalUserId}` : `sessionId: ${finalSessionId}`)
+
+    // Recuperar historial de conversación desde MongoDB o usar el enviado (retrocompatibilidad)
+    let mongoConversationHistory: ConversationMessage[] = []
+    let legacyConversationHistory: any[] = []
+    
+    if (conversationHistory && Array.isArray(conversationHistory)) {
+      // Modo compatibilidad: usar historial pasado directamente
+      console.log('🔄 Usando historial pasado (modo compatibilidad):', conversationHistory.length, 'mensajes')
+      legacyConversationHistory = conversationHistory
+    } else {
+      // Modo normal: recuperar de MongoDB
+      try {
+        console.log('📚 Recuperando historial de conversación desde MongoDB...')
+        mongoConversationHistory = await getConversationHistory(conversationId)
+        console.log('💬 Historial recuperado:', mongoConversationHistory.length, 'mensajes')
+        
+        // Convertir mensajes de ConversationMessage a formato simple para compatibilidad
+        legacyConversationHistory = mongoConversationHistory.map(msg => ({
+          type: msg.role === 'assistant' ? 'assistant' : 'user',
+          content: msg.content
+        }))
+      } catch (historyError) {
+        console.error('⚠️ Error recuperando historial (continuando sin historial):', historyError)
+        legacyConversationHistory = []
+      }
+    }
+
+    // Si no están configuradas las APIs reales, usar datos de demostración
+    if (!process.env.OPENROUTER_API_KEY || !process.env.MONGODB_URI) {
+      console.log('⚠️ Usando datos de demostración (APIs no configuradas)')
+      const demoResponse = getDemoResponse(query, legacyConversationHistory)
+      
+      // Guardar conversación demo si MongoDB está disponible
+      if (process.env.MONGODB_URI && !process.env.MONGODB_URI.includes('demo')) {
+        try {
+          const demoAssistantResponse = JSON.stringify({
+            recommendations: demoResponse.recommendations.length,
+            petVoiceResponse: demoResponse.petVoiceResponse,
+            summary: demoResponse.summary,
+            demo: true
+          })
+          
+          await saveConversationExchange(
+            conversationId,
+            query,
+            demoAssistantResponse,
+            { userPet, demo: true, timestamp: new Date() }
+          )
+          console.log('✅ Conversación demo guardada')
+        } catch (saveError) {
+          console.error('⚠️ Error guardando conversación demo:', saveError)
+        }
+      }
+      
+      return NextResponse.json({ ...demoResponse, conversationSaved: true })
     }
 
     // Si no están configuradas las APIs reales, usar datos de demostración
@@ -52,13 +129,37 @@ export async function POST(request: NextRequest) {
 
     if (useDemo) {
       // Usar datos de demostración locales
-      const demoResponse = getDemoResponse(query)
+      const demoResponse = getDemoResponse(query, legacyConversationHistory)
+      
+      // Guardar conversación demo si MongoDB está disponible
+      if (hasValidMongoDB) {
+        try {
+          const demoAssistantResponse = JSON.stringify({
+            recommendations: demoResponse.recommendations.length,
+            petVoiceResponse: demoResponse.petVoiceResponse,
+            summary: demoResponse.summary,
+            demo: true
+          })
+          
+          await saveConversationExchange(
+            conversationId,
+            query,
+            demoAssistantResponse,
+            { userPet, demo: true, timestamp: new Date() }
+          )
+          console.log('✅ Conversación demo guardada')
+        } catch (saveError) {
+          console.error('⚠️ Error guardando conversación demo:', saveError)
+        }
+      }
+      
       return NextResponse.json({ 
         recommendations: demoResponse.recommendations,
         petVoiceResponse: demoResponse.petVoiceResponse,
         summary: demoResponse.summary,
         total: demoResponse.recommendations.length,
-        demo: true
+        demo: true,
+        conversationSaved: hasValidMongoDB
       })
     }
 
@@ -89,8 +190,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`🐾 Encontradas ${allRecommendations.length} recomendaciones en ${allPetProfiles.length} perfiles de mascotas`)
 
-    // Llamar a OpenRouter con el contexto completo de recomendaciones y la mascota del usuario
-    const llmResponse = await callOpenRouter(query, allRecommendations, userPet)
+    // Llamar a OpenRouter con el contexto completo de recomendaciones, la mascota del usuario y el historial
+    const llmResponse = await callOpenRouter(query, allRecommendations, userPet, legacyConversationHistory)
     
     if (!llmResponse) {
       return NextResponse.json({ error: 'Error processing query' }, { status: 500 })
@@ -321,9 +422,46 @@ export async function POST(request: NextRequest) {
       matchingRecommendations = allRecommendations.slice(0, 4)
     }
 
-    const summary = generateSummary(query, llmResponse, matchingRecommendations.length)
+    const summary = generateSummary(query, llmResponse, matchingRecommendations.length, legacyConversationHistory)
 
     await client.close()
+
+    // Preparar respuesta del asistente para guardar
+    const assistantResponse = JSON.stringify({
+      recommendations: matchingRecommendations.length,
+      petVoiceResponse: llmResponse.petVoiceResponse,
+      summary,
+      issues: llmResponse.issues,
+      recommendationTypes: llmResponse.recommendationTypes
+    })
+
+    // Guardar el intercambio completo en MongoDB (solo si no está en modo compatibilidad)
+    let conversationSaved = false
+    const isCompatibilityMode = finalSessionId?.startsWith('temp_session_')
+    
+    if (!isCompatibilityMode) {
+      try {
+        console.log('💾 Guardando intercambio en MongoDB...')
+        await saveConversationExchange(
+          conversationId,
+          query,
+          assistantResponse,
+          {
+            userPet,
+            timestamp: new Date(),
+            recommendationsFound: matchingRecommendations.length,
+            llmResponse: llmResponse
+          }
+        )
+        console.log('✅ Intercambio guardado exitosamente')
+        conversationSaved = true
+      } catch (saveError) {
+        console.error('⚠️ Error guardando conversación (continuando):', saveError)
+        // No fallar la respuesta si el guardado falla
+      }
+    } else {
+      console.log('🔄 Modo compatibilidad: omitiendo guardado de conversación')
+    }
 
     return NextResponse.json({ 
       recommendations: matchingRecommendations,
@@ -332,7 +470,8 @@ export async function POST(request: NextRequest) {
       issues: llmResponse.issues,
       recommendationTypes: llmResponse.recommendationTypes,
       summary,
-      total: matchingRecommendations.length
+      total: matchingRecommendations.length,
+      conversationSaved: conversationSaved
     })
 
   } catch (error) {
@@ -341,7 +480,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateSummary(query: string, llmResponse: any, totalRecommendations: number): string {
+function generateSummary(query: string, llmResponse: any, totalRecommendations: number, conversationHistory?: any[]): string {
+  // Detectar si es una conversación continua
+  let continuationContext = ''
+  if (conversationHistory && conversationHistory.length > 0) {
+    continuationContext = 'Continuando nuestra conversación: '
+  }
+  
   // Si hay mascota registrada, priorizar respuesta personalizada
   if (llmResponse.petVoiceResponse?.hasRegisteredPet) {
     const petName = llmResponse.petVoiceResponse.petName || 'tu mascota'
@@ -350,14 +495,14 @@ function generateSummary(query: string, llmResponse: any, totalRecommendations: 
     
     if (issues.length > 0 && types.length > 0) {
       const typeEmoji = types[0] === 'training' ? '🎓' : types[0] === 'nutrition' ? '🥩' : '🧘'
-      return `${typeEmoji} ${petName} necesita ayuda con ${issues.join(' y ')}: ${totalRecommendations} recomendaciones específicas encontradas.`
+      return `${continuationContext}${typeEmoji} ${petName} necesita ayuda con ${issues.join(' y ')}: ${totalRecommendations} recomendaciones específicas encontradas.`
     } else if (issues.length > 0) {
-      return `💬 ${petName} necesita ayuda con: ${issues.join(', ')}. ${totalRecommendations} recomendaciones personalizadas.`
+      return `${continuationContext}💬 ${petName} necesita ayuda con: ${issues.join(', ')}. ${totalRecommendations} recomendaciones personalizadas.`
     } else if (types.length > 0) {
       const typeNames = types.map((t: string) => t === 'training' ? 'entrenamiento' : t === 'nutrition' ? 'nutrición' : 'bienestar')
-      return `🎯 ${petName} está listo para ${typeNames.join(' y ')}: ${totalRecommendations} recomendaciones disponibles.`
+      return `${continuationContext}🎯 ${petName} está listo para ${typeNames.join(' y ')}: ${totalRecommendations} recomendaciones disponibles.`
     } else {
-      return `💬 ${petName} está listo para nuevas aventuras. ${totalRecommendations} recomendaciones disponibles.`
+      return `${continuationContext}💬 ${petName} está listo para nuevas aventuras. ${totalRecommendations} recomendaciones disponibles.`
     }
   }
   
@@ -413,7 +558,7 @@ function generateSummary(query: string, llmResponse: any, totalRecommendations: 
   }
 }
 
-function getDemoResponse(query: string) {
+function getDemoResponse(query: string, conversationHistory?: any[]) {
   const lowerQuery = query.toLowerCase()
   
   // Detectar si tiene mascota registrada
@@ -483,30 +628,53 @@ function getDemoResponse(query: string) {
   }
 
   if (hasRegisteredPet) {
+    // Analizar historial de conversación para contexto
+    let conversationContext = ''
+    if (conversationHistory && conversationHistory.length > 0) {
+      const previousUserMessages = conversationHistory.filter(msg => msg.type === 'user').map(msg => msg.content.toLowerCase())
+      const previousTopics = previousUserMessages.join(' ')
+      
+      if (previousTopics.includes('ladra') || previousTopics.includes('ladrido')) {
+        conversationContext = ' Como seguimiento a lo que hablamos sobre mis ladridos,'
+      } else if (previousTopics.includes('comida') || previousTopics.includes('alimenta')) {
+        conversationContext = ' Continuando con lo que discutimos sobre mi alimentación,'
+      } else if (previousTopics.includes('ejercicio') || previousTopics.includes('juega')) {
+        conversationContext = ' En relación a nuestra conversación sobre ejercicio,'
+      } else if (conversationHistory.length > 0) {
+        conversationContext = ' Como continuación de nuestra conversación,'
+      }
+    }
+    
     petVoiceResponse = {
       hasRegisteredPet: true,
       petName: 'tu mascota',
       petBreed: lowerQuery.includes('perro') ? 'perro' : 'gato',
-      voiceMessage: "¡Hola humano! 🐾 Veo que buscas formas de ayudarme a ser mejor. ¡Me encanta aprender cosas nuevas contigo!",
+      voiceMessage: `¡Hola humano!${conversationContext} 🐾 Veo que buscas formas de ayudarme a ser mejor. ¡Me encanta aprender cosas nuevas contigo!`,
       emotionalTone: 'emocionado'
     }
 
     // Personalizar mensaje según el problema
     if (lowerQuery.includes('ladra')) {
-      petVoiceResponse.voiceMessage = "¡Guau! Sé que a veces ladro mucho... es que me emociono. ¿Me ayudas a aprender cuándo estar tranquilo? 🐕"
+      petVoiceResponse.voiceMessage = `¡Guau!${conversationContext} Sé que a veces ladro mucho... es que me emociono. ¿Me ayudas a aprender cuándo estar tranquilo? 🐕`
       petVoiceResponse.emotionalTone = 'juguetón'
     } else if (lowerQuery.includes('aburrimiento') || lowerQuery.includes('aburro')) {
-      petVoiceResponse.voiceMessage = "¡Oye! Me aburro cuando no estás. ¿Podríamos hacer juegos nuevos juntos? ¡Prometo no destruir nada! 😅"
+      petVoiceResponse.voiceMessage = `¡Oye!${conversationContext} Me aburro cuando no estás. ¿Podríamos hacer juegos nuevos juntos? ¡Prometo no destruir nada! 😅`
       petVoiceResponse.emotionalTone = 'juguetón'
     } else if (lowerQuery.includes('comida') || lowerQuery.includes('peso')) {
-      petVoiceResponse.voiceMessage = "Humano... creo que me das demasiadas chuches deliciosas. Ayúdame a estar fuerte y saludable, ¿sí? 🥺"
+      petVoiceResponse.voiceMessage = `Humano...${conversationContext} creo que me das demasiadas chuches deliciosas. Ayúdame a estar fuerte y saludable, ¿sí? 🥺`
       petVoiceResponse.emotionalTone = 'preocupado'
     }
   }
 
+  // Generar summary con contexto de conversación
+  let continuationPrefix = ''
+  if (conversationHistory && conversationHistory.length > 0) {
+    continuationPrefix = 'Continuando nuestra conversación: '
+  }
+
   const summary = hasRegisteredPet 
-    ? `🧪 Modo Demo - ${petVoiceResponse.petName} necesita tu ayuda. ${filteredRecommendations.length} recomendaciones encontradas.`
-    : `🧪 Modo Demo - Recomendaciones de bienestar para mascotas. ${filteredRecommendations.length} sugerencias disponibles.`
+    ? `${continuationPrefix}🧪 Modo Demo - ${petVoiceResponse.petName} necesita tu ayuda. ${filteredRecommendations.length} recomendaciones encontradas.`
+    : `${continuationPrefix}🧪 Modo Demo - Recomendaciones de bienestar para mascotas. ${filteredRecommendations.length} sugerencias disponibles.`
 
   return {
     recommendations: filteredRecommendations,

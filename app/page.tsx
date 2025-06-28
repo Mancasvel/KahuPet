@@ -1,85 +1,43 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { Input, Button, Card, CardBody, Divider, Spinner, Badge } from '@heroui/react'
-import { PetCard } from '@/components/PetCard'
-import { RecommendationCard } from '@/components/RecommendationCard'
-import { PetVoiceChat } from '@/components/PetVoiceChat'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { Input, Button, Card, CardBody, Divider, Spinner } from '@heroui/react'
 import { NavbarComponent } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 import PetRegistrationForm from '@/components/PetRegistrationForm'
 import { useAuth } from '@/lib/AuthContext'
 
-interface Recommendation {
-  _id: string
-  type: 'training' | 'nutrition' | 'wellness'
-  title: string
-  description: string
-  breed: string
-  category: string
-  tags?: string[]
-  difficulty: string
-  duration: string
-  ageRange: string
-  image?: string
-  portions?: string
-}
-
-interface PetProfile {
-  _id: string
-  breed: string
-  category: string
-  size: string
-  characteristics: {
-    energy: string
-    temperament: string[]
-    lifespan: string
-    weight: string
-    exerciseNeeds: string
-  }
-  commonIssues: string[]
-  recommendations: Recommendation[]
-}
-
-interface PetVoiceResponse {
-  hasRegisteredPet: boolean
-  petName?: string
-  petBreed?: string
-  voiceMessage: string
-  emotionalTone: string
+interface Message {
+  id: string
+  type: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+  petContext?: any
 }
 
 export default function Home() {
   const { user, loading: authLoading, refreshUser } = useAuth()
   const [query, setQuery] = useState('')
-  const [petProfiles, setPetProfiles] = useState<PetProfile[]>([])
-  const [allPetProfiles, setAllPetProfiles] = useState<PetProfile[]>([])
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [summary, setSummary] = useState('')
-  const [petVoiceResponse, setPetVoiceResponse] = useState<PetVoiceResponse | null>(null)
-  const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([])
-  const [searchMode, setSearchMode] = useState<'profiles' | 'recommendations'>('recommendations')
   const [showRegistrationForm, setShowRegistrationForm] = useState(false)
   const [userPets, setUserPets] = useState<any[]>([])
   const [selectedPet, setSelectedPet] = useState<any>(null)
-  const [editingPet, setEditingPet] = useState<any>(null) // Para distinguir entre crear y editar
+  const [editingPet, setEditingPet] = useState<any>(null)
   const [interestedInPaying, setInterestedInPaying] = useState(false)
   const [isMarkingInterest, setIsMarkingInterest] = useState(false)
+  
+  // New conversation states
+  const [messages, setMessages] = useState<Message[]>([])
+  const [conversationStarted, setConversationStarted] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Cargar todos los perfiles de mascotas al inicio
-  const loadAllPetProfiles = useCallback(async () => {
-    try {
-      const response = await fetch('/api/pets')
-      if (response.ok) {
-        const data = await response.json()
-        setAllPetProfiles(data)
-        setPetProfiles(data)
-      }
-    } catch (error) {
-      console.error('Error cargando perfiles de mascotas:', error)
-    }
-  }, [])
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   // Cargar las mascotas registradas del usuario autenticado
   const loadUserPets = useCallback(async () => {
@@ -99,27 +57,19 @@ export default function Home() {
         const pets = await response.json()
         setUserPets(pets)
         
-        // Seleccionar la primera mascota por defecto o mantener la selección actual si aún existe
         if (pets.length > 0) {
           if (!selectedPet) {
-            // Si no hay mascota seleccionada, seleccionar la primera
             setSelectedPet(pets[0])
           } else {
-            // Si hay mascota seleccionada, verificar que aún existe en la lista
             const stillExists = pets.find((pet: any) => pet._id === selectedPet._id)
             if (!stillExists) {
-              // Si la mascota seleccionada ya no existe, seleccionar la primera disponible
               setSelectedPet(pets[0])
             }
           }
         } else {
-          // Si no hay mascotas, limpiar la selección
           setSelectedPet(null)
         }
-        
-        console.log('🏷️ Mascotas del usuario cargadas:', pets)
       } else if (response.status === 401) {
-        // Usuario no autenticado
         setUserPets([])
         setSelectedPet(null)
       }
@@ -130,669 +80,717 @@ export default function Home() {
     }
   }, [user, selectedPet])
 
-  // Cargar perfiles y mascotas del usuario al montar el componente
-  useEffect(() => {
-    loadAllPetProfiles()
-  }, [loadAllPetProfiles])
-
   // Cargar mascotas cuando el usuario cambie
   useEffect(() => {
     loadUserPets()
-    // También cargar el estado de interés en pagar
     if (user) {
       setInterestedInPaying(user.interestedInPaying === 1)
     }
   }, [loadUserPets, user])
 
+  // Generar sessionId para usuarios anónimos
+  const getSessionId = () => {
+    if (typeof window !== 'undefined') {
+      let sessionId = localStorage.getItem('kahupet_session_id')
+      if (!sessionId) {
+        sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+        localStorage.setItem('kahupet_session_id', sessionId)
+      }
+      return sessionId
+    }
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+  }
+
   const searchPetCare = async () => {
     if (!query.trim()) {
-      setPetProfiles(allPetProfiles)
-      setRecommendations([])
-      setSummary('')
-      setPetVoiceResponse(null)
       return
     }
 
+    // Add user message to conversation
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: query,
+      timestamp: new Date(),
+      petContext: selectedPet
+    }
+
+    setMessages(prev => [...prev, userMessage])
+    setConversationStarted(true)
     setIsLoading(true)
-    setSummary('')
-    setPetVoiceResponse(null)
-    setRecommendations([])
+    
+    const currentQuery = query
+    setQuery('') // Clear input immediately
     
     try {
-      // Usar la API de parse que ya adaptamos para mascotas
+      // Preparar identificadores para el nuevo sistema de conversaciones
+      const conversationParams = user?.id 
+        ? { userId: user.id }
+        : { sessionId: getSessionId() }
+
+      console.log('🔄 Enviando consulta con parámetros:', {
+        query: currentQuery,
+        userPet: selectedPet?.nombre || 'Sin mascota',
+        ...conversationParams
+      })
+      
       const response = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          query,
-          userPet: selectedPet // Enviar información de la mascota seleccionada si existe
+          query: currentQuery,
+          userPet: selectedPet,
+          ...conversationParams
         })
       })
 
       if (response.ok) {
         const data = await response.json()
         
-        setSummary(data.summary || `Resultados para: "${query}"`)
-        setPetVoiceResponse(data.petVoiceResponse)
+        console.log('✅ Respuesta exitosa del servidor:', {
+          petVoiceResponse: !!data.petVoiceResponse,
+          summary: !!data.summary,
+          recommendations: data.recommendations?.length || 0,
+          conversationSaved: data.conversationSaved
+        })
         
-        // Si hay recomendaciones específicas, mostrarlas
-        if (data.recommendations && data.recommendations.length > 0) {
-          setRecommendations(data.recommendations)
-          setSearchMode('recommendations')
-          
-          // Filtrar perfiles que tengan esas recomendaciones
-          const recBreeds = new Set(data.recommendations.map((rec: any) => rec.breed))
-          const filteredProfiles = allPetProfiles.filter(profile => 
-            recBreeds.has(profile.breed)
-          )
-          setPetProfiles(filteredProfiles.length > 0 ? filteredProfiles : allPetProfiles)
+        // Priorizar respuesta de voz de la mascota si está disponible
+        let assistantContent = ''
+        if (data.petVoiceResponse && data.petVoiceResponse.voiceMessage) {
+          assistantContent = data.petVoiceResponse.voiceMessage
+        } else if (data.summary) {
+          assistantContent = data.summary
+        } else if (data.recommendation) {
+          assistantContent = data.recommendation
+        } else if (data.message) {
+          assistantContent = data.message
         } else {
-          // Si no hay recomendaciones específicas, mostrar perfiles relevantes
-          setSearchMode('profiles')
-          setPetProfiles(allPetProfiles)
+          // Fallback con información básica de las recomendaciones
+          if (data.recommendations && data.recommendations.length > 0) {
+            assistantContent = `¡He encontrado ${data.recommendations.length} recomendaciones útiles para ti! 🐾`
+          } else {
+            assistantContent = 'Lo siento, no pude procesar tu consulta en este momento.'
+          }
         }
         
+        // Add assistant response to conversation
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: assistantContent,
+          timestamp: new Date()
+        }
+
+        setMessages(prev => [...prev, assistantMessage])
       } else {
-        setSummary('Error en la búsqueda. Mostrando todos los perfiles.')
-        setPetProfiles(allPetProfiles)
+        // Handle error response with more details
+        console.error('❌ Error en la respuesta del servidor:', response.status, response.statusText)
+        
+        let errorContent = 'Lo siento, hubo un error procesando tu consulta.'
+        
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorContent = `Error: ${errorData.error}`
+            console.error('📋 Detalles del error:', errorData)
+          }
+        } catch (parseError) {
+          console.error('❌ Error parseando respuesta de error:', parseError)
+        }
+        
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          type: 'assistant',
+          content: errorContent,
+          timestamp: new Date()
+        }
+        setMessages(prev => [...prev, errorMessage])
       }
     } catch (error) {
       console.error('Error en búsqueda:', error)
-      setSummary('Error en la búsqueda. Mostrando todos los perfiles.')
-      setPetProfiles(allPetProfiles)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: 'Lo siento, hubo un problema de conexión. Por favor intenta de nuevo.',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleSelectRecommendation = (recommendation: Recommendation) => {
-    setSelectedRecommendations(prev => {
-      const exists = prev.find(r => r._id === recommendation._id)
-      if (exists) {
-        return prev.filter(r => r._id !== recommendation._id)
-      } else {
-        return [...prev, recommendation]
-      }
-    })
-  }
-
-  const handleRemoveRecommendation = (id: string) => {
-    setSelectedRecommendations(prev => prev.filter(r => r._id !== id))
-  }
-
-  const handleClearSelections = () => {
-    setSelectedRecommendations([])
-  }
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
       searchPetCare()
     }
   }
 
-  const getTypeIcon = (type: string) => {
-    switch(type) {
-      case 'training': return '🎓'
-      case 'nutrition': return '🥩'
-      case 'wellness': return '🧘'
-      default: return '💡'
-    }
-  }
-
   const handlePetRegistrationSuccess = (pet: any) => {
-    console.log('Mascota registrada/actualizada exitosamente:', pet)
-    console.log('Editando mascota existente:', !!editingPet)
-    // Recargar la lista de mascotas del usuario
+    console.log('🎉 Mascota registrada exitosamente:', pet)
     loadUserPets()
-    // Actualizar contador en navbar
     refreshUser()
-    // Limpiar el estado de edición
+    setShowRegistrationForm(false)
     setEditingPet(null)
-    
-    // Si se registró una nueva mascota, seleccionarla automáticamente
-    if (!editingPet && pet) {
-      setTimeout(() => {
-        // Buscar la mascota por nombre ya que el _id puede ser diferente después de recargar
-        const foundPet = userPets.find(p => p.nombre === pet.nombre && p.tipo === pet.tipo && p.raza === pet.raza)
-        if (foundPet) {
-          setSelectedPet(foundPet)
-        } else {
-          setSelectedPet(pet)
-        }
-      }, 200) // Pequeño delay para asegurar que loadUserPets termine
+  }
+
+  const handleEditPet = () => {
+    if (selectedPet) {
+      setEditingPet(selectedPet)
+      setShowRegistrationForm(true)
     }
   }
 
-  // Función para abrir el formulario para editar una mascota existente
-  const handleEditPet = () => {
-    setEditingPet(selectedPet)
-    setShowRegistrationForm(true)
-  }
-
-  // Función para abrir el formulario para añadir una nueva mascota
   const handleAddNewPet = () => {
     setEditingPet(null)
     setShowRegistrationForm(true)
   }
 
-  // Función para cerrar el formulario y limpiar estado
   const handleCloseRegistrationForm = () => {
     setShowRegistrationForm(false)
     setEditingPet(null)
   }
 
-  // Función para marcar interés en pagar
   const handleMarkInterest = async () => {
-    if (!user) {
-      alert('Debes iniciar sesión para marcar tu interés')
-      return
-    }
-
-    if (interestedInPaying) {
-      alert('¡Ya has marcado tu interés! Te contactaremos pronto.')
-      return
-    }
-
     setIsMarkingInterest(true)
-    
     try {
       const response = await fetch('/api/user-interest', {
         method: 'POST',
-        credentials: 'include'
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ interestedInPaying: 1 })
       })
 
       if (response.ok) {
-        const data = await response.json()
         setInterestedInPaying(true)
-        alert(data.message || '¡Gracias por tu interés! Te contactaremos pronto.')
-        // Actualizar el usuario en el contexto
-        refreshUser()
+        if (user) {
+          refreshUser()
+        }
       } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
+        console.error('Error marcando interés:', response.statusText)
+        alert('Error al marcar el interés. Por favor intenta de nuevo.')
       }
     } catch (error) {
       console.error('Error marcando interés:', error)
-      alert('Error al marcar interés. Por favor intenta de nuevo.')
+      alert('Error al marcar el interés. Por favor intenta de nuevo.')
     } finally {
       setIsMarkingInterest(false)
     }
   }
 
-  // Función para eliminar la mascota seleccionada
-  const handleDeletePet = async () => {
-    if (!selectedPet) return
+  const startNewConversation = () => {
+    setMessages([])
+    setConversationStarted(false)
+    setQuery('')
     
-    const confirmDelete = window.confirm(`¿Estás seguro de que quieres eliminar a ${selectedPet.nombre}? Esta acción no se puede deshacer.`)
-    
-    if (!confirmDelete) return
-    
-    try {
-      const response = await fetch(`/api/user-pets?petId=${selectedPet._id}`, {
-        method: 'DELETE',
-        credentials: 'include'
-      })
-      
-      if (response.ok) {
-        // Recargar lista de mascotas
-        loadUserPets()
-        // Actualizar contador en navbar
-        refreshUser()
-        console.log('🗑️ Mascota eliminada exitosamente')
-        // También limpiar cualquier respuesta de voz previa
-        setPetVoiceResponse(null)
-        // Limpiar la consulta actual
-        setQuery('')
-        setSummary('')
-        setRecommendations([])
-        setPetProfiles(allPetProfiles)
-      } else {
-        console.error('Error eliminando mascota')
-        alert('Error al eliminar la mascota. Por favor intenta de nuevo.')
-      }
-    } catch (error) {
-      console.error('Error eliminando mascota:', error)
-      alert('Error al eliminar la mascota. Por favor intenta de nuevo.')
+    // Limpiar sessionId para usuarios anónimos para iniciar nueva conversación
+    if (!user?.id && typeof window !== 'undefined') {
+      localStorage.removeItem('kahupet_session_id')
+      console.log('🔄 Nueva conversación iniciada - SessionId limpiado')
     }
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navbar estilo Kahupet */}
-      <NavbarComponent onRegisterPet={handleAddNewPet} />
-      
-      <div className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="inline-block p-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-4">
-            <span className="text-4xl">🐾</span>
+  // Render conversation interface
+  if (conversationStarted) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+        {/* Navbar */}
+        <NavbarComponent onRegisterPet={handleAddNewPet} />
+        
+        {/* Chat Header */}
+        <div className="bg-white border-b border-slate-200 shadow-sm">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <span className="text-lg">
+                    {selectedPet ? (selectedPet.tipo === 'gato' ? '🐱' : '🐕') : '🐾'}
+                  </span>
+                </div>
+                <div>
+                  <h1 className="text-xl font-semibold text-slate-900">
+                    {selectedPet ? selectedPet.nombre : 'Kahupet'}
+                  </h1>
+                  {selectedPet && (
+                    <p className="text-sm text-slate-600">
+                      {selectedPet.raza} • {selectedPet.edad} {selectedPet.edad === 1 ? 'año' : 'años'}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="light"
+                onClick={startNewConversation}
+                className="text-slate-600 hover:text-slate-900"
+              >
+                Nueva consulta
+              </Button>
+            </div>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
-            ¡Hola! Soy <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Kahupet</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Entiende a tu mascota - Te ayudo con recomendaciones personalizadas de entrenamiento, nutrición y bienestar
-          </p>
+        </div>
 
-          {/* Botón de interés en versión Premium */}
-          {user && !interestedInPaying && (
-            <div className="mb-8">
-              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-6 max-w-lg mx-auto">
-                <div className="text-center">
-                  <div className="text-3xl mb-3">⭐</div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
-                    ¿Te gustaría la versión Premium?
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Acceso ilimitado, funciones avanzadas y soporte prioritario
-                  </p>
-                  <Button
-                    size="lg"
-                    onClick={handleMarkInterest}
-                    isLoading={isMarkingInterest}
-                    className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold px-8 py-4 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+        {/* Messages Area */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="space-y-6">
+              {messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  <div
+                    className={`max-w-3xl rounded-2xl px-4 py-3 ${
+                      message.type === 'user'
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-slate-900 border border-slate-200 shadow-sm'
+                    }`}
                   >
-                    {isMarkingInterest ? (
-                      <Spinner size="sm" color="white" />
-                    ) : (
-                      <>
-                        <span className="mr-2">💎</span>
-                        ¡Sí, me interesa Premium!
-                      </>
+                    {message.type === 'assistant' && (
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs">
+                            {selectedPet ? (selectedPet.tipo === 'gato' ? '🐱' : '🐕') : '🤖'}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-slate-600">
+                          {selectedPet ? selectedPet.nombre : 'Kahupet'}
+                        </span>
+                      </div>
                     )}
-                  </Button>
+                    <div className="prose prose-sm max-w-none">
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    </div>
+                    <div className={`text-xs mt-2 ${
+                      message.type === 'user' ? 'text-indigo-200' : 'text-slate-500'
+                    }`}>
+                      {message.timestamp.toLocaleTimeString()}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {/* Mensaje de agradecimiento para usuarios interesados */}
-          {user && interestedInPaying && (
-            <div className="mb-8">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4 max-w-lg mx-auto">
-                <div className="text-center">
-                  <div className="text-2xl mb-2">✅</div>
-                  <p className="text-green-800 font-semibold">
-                    ¡Gracias por tu interés en Premium! Te contactaremos pronto.
-                  </p>
+              ))}
+              
+              {/* Loading indicator */}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="max-w-3xl rounded-2xl px-4 py-3 bg-white border border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-xs">
+                          {selectedPet ? (selectedPet.tipo === 'gato' ? '🐱' : '🐕') : '🤖'}
+                        </span>
+                      </div>
+                      <span className="text-sm font-medium text-slate-600">
+                        {selectedPet ? selectedPet.nombre : 'Kahupet'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Spinner size="sm" />
+                      <span className="text-slate-500">
+                        {selectedPet 
+                          ? `${selectedPet.nombre} está pensando...` 
+                          : 'Analizando tu consulta...'
+                        }
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
+              
+              <div ref={messagesEndRef} />
             </div>
-          )}
+          </div>
+        </div>
 
-          {/* Barra de búsqueda principal */}
-          <div className="max-w-2xl mx-auto mb-8">
+        {/* Input Area */}
+        <div className="bg-white border-t border-slate-200 shadow-lg">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex gap-3">
               <Input
-                size="lg"
                 placeholder={
                   selectedPet 
-                    ? `Ej: ${selectedPet.nombre} no deja de ladrar cuando llegan visitas...`
-                    : "Ej: Mi golden retriever no deja de ladrar cuando llegan visitas..."
+                    ? `Pregúntale algo más a ${selectedPet.nombre}...`
+                    : "Escribe tu siguiente pregunta..."
                 }
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyPress={handleKeyPress}
-                startContent={
-                  <span className="text-2xl">
-                    {selectedPet 
-                      ? (selectedPet.tipo === 'gato' ? '🐱' : '🐕')
-                      : '🐾'
-                    }
-                  </span>
-                }
                 className="flex-1"
                 classNames={{
-                  input: "text-lg",
-                  inputWrapper: `h-14 bg-white shadow-lg border-2 ${
-                    selectedPet 
-                      ? 'border-blue-300 hover:border-blue-400 focus-within:border-blue-500' 
-                      : 'border-blue-100 hover:border-blue-200 focus-within:border-blue-400'
-                  }`
+                  input: "text-base",
+                  inputWrapper: "bg-slate-50 border-slate-200 hover:border-slate-300 focus-within:border-indigo-500"
                 }}
+                disabled={isLoading}
               />
               <Button
-                size="lg"
                 onClick={searchPetCare}
                 isLoading={isLoading}
-                className="h-14 px-8 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+                isDisabled={!query.trim() || isLoading}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white px-6"
               >
-                {isLoading ? <Spinner size="sm" color="white" /> : '🔍 Buscar'}
+                {isLoading ? <Spinner size="sm" color="white" /> : 'Enviar'}
               </Button>
             </div>
+            {selectedPet && (
+              <p className="text-xs text-slate-500 mt-2 text-center">
+                💬 Conversando con {selectedPet.nombre} • {selectedPet.raza}
+              </p>
+            )}
           </div>
-
-          {/* Ejemplos de consultas */}
-          <div className="flex flex-wrap justify-center gap-3 mb-6">
-            {(() => {
-              if (selectedPet) {
-                const petName = selectedPet.nombre
-                const isPerro = selectedPet.tipo === 'perro'
-                return [
-                  `${petName} ${isPerro ? 'ladra mucho' : 'maúlla de noche'} ${isPerro ? '🐕' : '🐱'}`,
-                  `Dieta para ${petName} ${isPerro ? '🥩' : '🐟'}`,
-                  `Ejercicio para ${petName} ${isPerro ? '🎾' : '🪶'}`,
-                  `Entrenamiento de ${petName} 🎓`
-                ]
-              } else {
-                return [
-                  "Mi perro ladra mucho 🐕",
-                  "Dieta para gato senior 🐱", 
-                  "Ejercicio para Border Collie 🏃",
-                  "Entrenamiento básico 🎓"
-                ]
-              }
-            })().map((example, index) => (
-              <Button
-                key={index}
-                size="sm"
-                variant="flat"
-                onClick={() => setQuery(example.replace(/ [🐕🐱🏃🎓🥩🐟🎾🪶]/, ''))}
-                className={`text-sm transition-colors ${
-                  selectedPet 
-                    ? 'bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 text-blue-800'
-                    : 'bg-white/70 hover:bg-white border border-gray-200 hover:border-blue-300'
-                }`}
-              >
-                {example}
-              </Button>
-            ))}
-          </div>
-
-          {/* Sección de mascotas registradas */}
-          {user ? (
-            <div className="flex justify-center mb-8">
-              {userPets.length > 0 ? (
-                <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-green-200 max-w-2xl w-full">
-                  <div className="text-center">
-                    <div className="text-4xl mb-2">🐾</div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-4">
-                      Tus Mascotas ({userPets.length}/5)
-                    </h3>
-                    
-                    {/* Selector de mascota activa para consultas */}
-                    <div className="mb-6">
-                      <p className="text-sm text-gray-600 mb-3 font-medium">
-                        💬 Consultar para:
-                      </p>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        {userPets.map((pet) => (
-                          <Button
-                            key={pet._id}
-                            size="md"
-                            variant={selectedPet?._id === pet._id ? "solid" : "flat"}
-                            onClick={() => setSelectedPet(pet)}
-                            className={`${
-                              selectedPet?._id === pet._id 
-                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg scale-105 transform' 
-                                : 'hover:bg-blue-50 border-2 border-blue-100 hover:border-blue-200'
-                            } transition-all duration-200 font-semibold`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg">
-                                {pet.tipo === 'gato' ? '🐱' : '🐕'}
-                              </span>
-                              <div className="text-left">
-                                <div className="font-semibold">{pet.nombre}</div>
-                                <div className="text-xs opacity-80">{pet.raza}</div>
-                              </div>
-                            </div>
-                          </Button>
-                        ))}
-                      </div>
-                      
-                      {/* Indicador de mascota activa */}
-                      {selectedPet && (
-                        <div className="mt-3 p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-                          <p className="text-sm text-blue-800 text-center">
-                            <span className="font-semibold">Modo activo:</span> Las consultas serán personalizadas para{' '}
-                            <span className="font-bold">{selectedPet.nombre}</span>{' '}
-                            ({selectedPet.raza}, {selectedPet.edad} {selectedPet.edad === 1 ? 'año' : 'años'})
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Acciones de gestión de mascotas */}
-                    <div className="border-t border-gray-200 pt-4">
-                      <p className="text-sm text-gray-600 mb-3 font-medium">
-                        ⚙️ Gestión de mascotas:
-                      </p>
-                      <div className="flex gap-2 justify-center flex-wrap">
-                        <Button
-                          size="sm"
-                          onClick={() => window.location.href = '/mascotas'}
-                          className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium px-4 shadow-md hover:shadow-lg transition-all"
-                        >
-                          🐾 Ver todas las mascotas
-                        </Button>
-                        {selectedPet && (
-                          <Button
-                            size="sm"
-                            onClick={handleEditPet}
-                            className="bg-blue-500 text-white font-medium px-3"
-                          >
-                            ✏️ Editar {selectedPet.nombre}
-                          </Button>
-                        )}
-                        {userPets.length < 5 && (
-                          <Button
-                            size="sm"
-                            onClick={handleAddNewPet}
-                            className="bg-green-500 text-white font-medium px-3"
-                          >
-                            ➕ Añadir mascota
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-blue-200 max-w-md text-center">
-                  <div className="text-4xl mb-4">🐾</div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
-                    ¡Registra tu primera mascota!
-                  </h3>
-                  <p className="text-gray-600 mb-4">
-                    Para recibir recomendaciones personalizadas
-                  </p>
-                  <Button
-                    size="lg"
-                    onClick={handleAddNewPet}
-                    className="bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold px-8 py-3 shadow-lg hover:shadow-xl transition-all"
-                  >
-                    <span className="text-xl mr-2">🐾</span>
-                    Registrar mascota
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Usuario no autenticado */
-            <div className="flex justify-center mb-8">
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 shadow-lg border-2 border-blue-200 max-w-lg text-center">
-                <div className="text-4xl mb-4">🔐</div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  ¡Bienvenido a Kahupet!
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Inicia sesión para registrar hasta 5 mascotas y recibir recomendaciones personalizadas
-                </p>
-                <p className="text-sm text-gray-500">
-                  También puedes usar Kahupet sin registrarte, pero las respuestas no serán personalizadas
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Respuesta de voz de la mascota */}
-        {petVoiceResponse && petVoiceResponse.hasRegisteredPet && (
-          <div className="max-w-4xl mx-auto mb-8">
-            <PetVoiceChat petVoiceResponse={petVoiceResponse} />
-          </div>
+        {/* Modal de registro de mascotas */}
+        {showRegistrationForm && (
+          <PetRegistrationForm
+            isOpen={showRegistrationForm}
+            onClose={handleCloseRegistrationForm}
+            onSuccess={handlePetRegistrationSuccess}
+            existingPet={editingPet}
+          />
         )}
+      </div>
+    )
+  }
 
-        {/* Resumen de resultados */}
-        {summary && (
-          <div className="max-w-4xl mx-auto mb-8">
-            <Card className="bg-white/80 backdrop-blur-sm border border-blue-100">
-              <CardBody className="p-4">
-                <p className="text-gray-700 font-medium">{summary}</p>
-              </CardBody>
-            </Card>
-          </div>
-        )}
+  // Initial landing page (before conversation starts)
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Navbar */}
+      <NavbarComponent onRegisterPet={handleAddNewPet} />
+      
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        {/* Hero Section */}
+        <div className="pt-16 pb-12 lg:pt-24 lg:pb-16">
+          <div className="text-center max-w-4xl mx-auto">
+            
+            <h1 className="text-4xl lg:text-6xl font-bold tracking-tight text-slate-900 mb-6">
+              ¡Hola! Soy{' '}
+              <span className="text-indigo-600">Kahupet</span>
+            </h1>
+            
+            <p className="text-xl lg:text-2xl text-slate-600 mb-12 leading-relaxed">
+              Entiende a tu mascota con recomendaciones personalizadas<br className="hidden sm:block" />
+              de entrenamiento, nutrición y bienestar
+            </p>
 
-        {/* Recomendaciones seleccionadas */}
-        {selectedRecommendations.length > 0 && (
-          <div className="max-w-6xl mx-auto mb-8">
-            <Card className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200">
-              <CardBody className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                    <span>📋</span>
-                    Plan seleccionado ({selectedRecommendations.length})
-                  </h3>
+            {/* Search Section */}
+            <div className="max-w-3xl mx-auto">
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                <Input
+                  size="lg"
+                  placeholder={
+                    selectedPet 
+                      ? `Ej: ${selectedPet.nombre} no deja de ladrar cuando llegan visitas...`
+                      : "Ej: Mi golden retriever no deja de ladrar cuando llegan visitas..."
+                  }
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  startContent={
+                    <span className="text-xl text-slate-400">
+                      {selectedPet 
+                        ? (selectedPet.tipo === 'gato' ? '🐱' : '🐕')
+                        : '🔍'
+                      }
+                    </span>
+                  }
+                  className="flex-1"
+                  classNames={{
+                    input: "text-lg placeholder:text-slate-400",
+                    inputWrapper: "h-14 bg-white border border-slate-200 hover:border-slate-300 focus-within:border-indigo-500 shadow-sm"
+                  }}
+                />
+                <Button
+                  size="lg"
+                  onClick={searchPetCare}
+                  isLoading={isLoading}
+                  className="h-14 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+                >
+                  {isLoading ? <Spinner size="sm" color="white" /> : 'Buscar'}
+                </Button>
+              </div>
+
+              {/* Quick suggestions */}
+              <div className="flex flex-wrap justify-center gap-3 mb-12">
+                {(() => {
+                  if (selectedPet) {
+                    const petName = selectedPet.nombre
+                    const isPerro = selectedPet.tipo === 'perro'
+                    return [
+                      `${petName} ${isPerro ? 'ladra mucho' : 'maúlla de noche'}`,
+                      `Dieta para ${petName}`,
+                      `Ejercicio para ${petName}`,
+                      `Entrenamiento de ${petName}`
+                    ]
+                  } else {
+                    return [
+                      "Mi perro ladra mucho",
+                      "Dieta para gato senior", 
+                      "Ejercicio para Border Collie",
+                      "Entrenamiento básico"
+                    ]
+                  }
+                })().map((example, index) => (
                   <Button
+                    key={index}
                     size="sm"
-                    variant="flat"
-                    onClick={handleClearSelections}
-                    className="text-red-600 hover:bg-red-50"
+                    variant="light"
+                    onClick={() => setQuery(example)}
+                    className="text-sm text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-200"
                   >
-                    Limpiar
+                    {example}
                   </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {selectedRecommendations.map((rec) => (
-                    <div key={rec._id} className="flex items-center gap-2 bg-white rounded-lg p-2 border">
-                      <span>{getTypeIcon(rec.type)}</span>
-                      <span className="text-sm font-medium text-gray-700">{rec.title}</span>
-                      <Button
-                        size="sm"
-                        isIconOnly
-                        variant="light"
-                        onClick={() => handleRemoveRecommendation(rec._id)}
-                        className="text-gray-400 hover:text-red-500 w-5 h-5"
-                      >
-                        ×
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardBody>
-            </Card>
-          </div>
-        )}
-
-        {/* Toggle entre modos de vista */}
-        {(recommendations.length > 0 || petProfiles.length > 0) && (
-          <div className="max-w-6xl mx-auto mb-6">
-            <div className="flex justify-center gap-2">
-              <Button
-                size="sm"
-                variant={searchMode === 'recommendations' ? 'solid' : 'flat'}
-                onClick={() => setSearchMode('recommendations')}
-                disabled={recommendations.length === 0}
-                className={searchMode === 'recommendations' ? 'bg-blue-500 text-white' : ''}
-              >
-                🎯 Recomendaciones ({recommendations.length})
-              </Button>
-              <Button
-                size="sm"
-                variant={searchMode === 'profiles' ? 'solid' : 'flat'}
-                onClick={() => setSearchMode('profiles')}
-                className={searchMode === 'profiles' ? 'bg-purple-500 text-white' : ''}
-              >
-                🐾 Perfiles de razas ({petProfiles.length})
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Grid de contenido principal */}
-        <div className="max-w-6xl mx-auto">
-          {searchMode === 'recommendations' && recommendations.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recommendations.map((recommendation) => (
-                <RecommendationCard
-                  key={recommendation._id}
-                  recommendation={recommendation}
-                  onSelect={handleSelectRecommendation}
-                />
-              ))}
-            </div>
-          )}
-
-          {searchMode === 'profiles' && petProfiles.length > 0 && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {petProfiles.map((petProfile) => (
-                <PetCard
-                  key={petProfile._id}
-                  petProfile={petProfile}
-                  onSelectRecommendation={handleSelectRecommendation}
-                />
-              ))}
-            </div>
-          )}
-
-          {/* Estado vacío */}
-          {!isLoading && recommendations.length === 0 && petProfiles.length === 0 && query && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🐾</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                No encontré recomendaciones específicas
-              </h3>
-              <p className="text-gray-500 mb-4">
-                Prueba con consultas como "mi perro ladra mucho" o "dieta para gato senior"
-              </p>
-              <Button
-                onClick={() => {
-                  setQuery('')
-                  setPetProfiles(allPetProfiles)
-                  setSearchMode('profiles')
-                }}
-                className="bg-blue-500 text-white"
-              >
-                Ver todos los perfiles
-              </Button>
-            </div>
-          )}
-
-          {/* Estado inicial */}
-          {!query && allPetProfiles.length > 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🏠</div>
-              <h3 className="text-xl font-semibold text-gray-700 mb-2">
-                ¿Cómo puedo ayudarte hoy?
-              </h3>
-              <p className="text-gray-500 mb-6">
-                Cuéntame qué necesita tu mascota y te daré recomendaciones personalizadas
-              </p>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {allPetProfiles.slice(0, 4).map((petProfile) => (
-                  <PetCard
-                    key={petProfile._id}
-                    petProfile={petProfile}
-                    onSelectRecommendation={handleSelectRecommendation}
-                  />
                 ))}
               </div>
             </div>
-          )}
+          </div>
         </div>
+
+        {/* User Pets Section */}
+        {user && userPets.length > 0 && (
+          <div className="pb-16">
+            <Card className="border border-slate-200">
+              <CardBody className="p-8">
+                <div className="text-center mb-8">
+                  <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                    <span className="text-xl">🐾</span>
+                  </div>
+                  <h2 className="text-2xl font-semibold text-slate-900 mb-2">
+                    Tus Mascotas
+                  </h2>
+                  <p className="text-slate-600">
+                    {userPets.length} de 5 mascotas registradas
+                  </p>
+                </div>
+                
+                {/* Pet selector */}
+                <div className="mb-8">
+                  <p className="text-sm font-medium text-slate-700 mb-4 text-center">
+                    Consultar para:
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {userPets.map((pet) => (
+                      <Button
+                        key={pet._id}
+                        size="lg"
+                        variant={selectedPet?._id === pet._id ? "solid" : "bordered"}
+                        onClick={() => setSelectedPet(pet)}
+                        className={`${
+                          selectedPet?._id === pet._id 
+                            ? 'bg-indigo-600 text-white shadow-lg border-indigo-600' 
+                            : 'border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50'
+                        } transition-all duration-200`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">
+                            {pet.tipo === 'gato' ? '🐱' : '🐕'}
+                          </span>
+                          <div className="text-left">
+                            <div className="font-medium">{pet.nombre}</div>
+                            <div className="text-xs opacity-75">{pet.raza}</div>
+                          </div>
+                        </div>
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  {/* Active pet indicator */}
+                  {selectedPet && (
+                    <div className="mt-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100">
+                      <p className="text-sm text-indigo-800 text-center">
+                        <span className="font-medium">Modo activo:</span> Las consultas serán personalizadas para{' '}
+                        <span className="font-semibold">{selectedPet.nombre}</span>{' '}
+                        ({selectedPet.raza}, {selectedPet.edad} {selectedPet.edad === 1 ? 'año' : 'años'})
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Pet management actions */}
+                <Divider className="mb-6" />
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button
+                    variant="bordered"
+                    onClick={() => window.location.href = '/mascotas'}
+                    className="border-slate-200 hover:border-slate-300 text-slate-700"
+                  >
+                    Ver todas las mascotas
+                  </Button>
+                  {selectedPet && (
+                    <Button
+                      variant="bordered"
+                      onClick={handleEditPet}
+                      className="border-slate-200 hover:border-slate-300 text-slate-700"
+                    >
+                      Editar {selectedPet.nombre}
+                    </Button>
+                  )}
+                  {userPets.length < 5 && (
+                    <Button
+                      onClick={handleAddNewPet}
+                      className="bg-slate-900 hover:bg-slate-800 text-white"
+                    >
+                      Añadir mascota
+                    </Button>
+                  )}
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        )}
+
+        {/* First-time user CTA */}
+        {user && userPets.length === 0 && (
+          <div className="pb-16">
+            <Card className="border border-slate-200">
+              <CardBody className="text-center p-12">
+                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <span className="text-2xl">🐾</span>
+                </div>
+                <h2 className="text-2xl font-semibold text-slate-900 mb-4">
+                  ¡Registra tu primera mascota!
+                </h2>
+                <p className="text-slate-600 mb-8 max-w-md mx-auto">
+                  Para recibir recomendaciones personalizadas y aprovechar al máximo Kahupet
+                </p>
+                <Button
+                  size="lg"
+                  onClick={handleAddNewPet}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-8"
+                >
+                  Registrar mascota
+                </Button>
+              </CardBody>
+            </Card>
+          </div>
+        )}
+
+        {/* Welcome message for non-authenticated users */}
+        {!user && (
+          <div className="pb-16">
+            <Card className="border border-slate-200">
+              <CardBody className="text-center p-12">
+                <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <span className="text-2xl">👋</span>
+                </div>
+                <h2 className="text-2xl font-semibold text-slate-900 mb-4">
+                  ¡Bienvenido a Kahupet!
+                </h2>
+                <p className="text-slate-600 mb-8 max-w-lg mx-auto">
+                  Regístrate para guardar hasta 5 mascotas y recibir recomendaciones personalizadas, 
+                  o continúa usando Kahupet sin registrarte
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    onClick={() => {/* Handle signup */}}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-8"
+                  >
+                    Crear cuenta gratis
+                  </Button>
+                  <Button
+                    variant="bordered"
+                    className="border-slate-200 hover:border-slate-300 text-slate-700"
+                  >
+                    Continuar sin registrarse
+                  </Button>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        )}
       </div>
 
-      <Footer />
+      {/* Premium CTA - Moved to bottom */}
+      {user && !interestedInPaying && (
+        <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border-t border-amber-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <Card className="border border-amber-200 bg-white/80 backdrop-blur-sm">
+              <CardBody className="text-center p-12">
+                <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <span className="text-2xl">⭐</span>
+                </div>
+                <h2 className="text-3xl font-bold text-slate-900 mb-4">
+                  ¿Te gustaría la versión Premium?
+                </h2>
+                <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+                  Desbloquea acceso ilimitado, funciones avanzadas, planes personalizados 
+                  y soporte prioritario para el cuidado de tus mascotas
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="text-lg">✅</span>
+                    <span>Consultas ilimitadas</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="text-lg">✅</span>
+                    <span>Planes personalizados</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <span className="text-lg">✅</span>
+                    <span>Soporte prioritario</span>
+                  </div>
+                </div>
+                <Button
+                  size="lg"
+                  onClick={handleMarkInterest}
+                  isLoading={isMarkingInterest}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-semibold px-12 py-4 text-lg"
+                >
+                  {isMarkingInterest ? (
+                    <Spinner size="sm" color="white" />
+                  ) : (
+                    <>Sí, me interesa Premium</>
+                  )}
+                </Button>
+                <p className="text-sm text-slate-500 mt-4">
+                  Sin compromiso • Te contactaremos pronto
+                </p>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+      )}
 
-      {/* Formulario de registro de mascota */}
-      <PetRegistrationForm
-        isOpen={showRegistrationForm}
-        onClose={handleCloseRegistrationForm}
-        onSuccess={handlePetRegistrationSuccess}
-        existingPet={editingPet}
-      />
+      {/* Thank you message for interested users */}
+      {user && interestedInPaying && (
+        <div className="bg-emerald-50 border-t border-emerald-200">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <Card className="border border-emerald-200 bg-white/80">
+              <CardBody className="text-center p-8">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+                  <span className="text-xl">✅</span>
+                </div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  ¡Gracias por tu interés en Premium!
+                </h3>
+                <p className="text-emerald-800">
+                  Nuestro equipo se pondrá en contacto contigo pronto para darte más detalles 
+                  sobre las funciones Premium de Kahupet.
+                </p>
+              </CardBody>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de registro de mascotas */}
+      {showRegistrationForm && (
+        <PetRegistrationForm
+          isOpen={showRegistrationForm}
+          onClose={handleCloseRegistrationForm}
+          onSuccess={handlePetRegistrationSuccess}
+          existingPet={editingPet}
+        />
+      )}
+
+      <Footer />
     </div>
   )
 } 

@@ -49,37 +49,32 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
   return (
     <>
       <Navbar 
-        isBordered 
-        className="bg-white/80 backdrop-blur-md border-blue-100"
+        className="bg-white/95 backdrop-blur-md border-b border-slate-200"
         classNames={{
-          wrapper: "max-w-7xl",
-          brand: "text-blue-600",
-          content: "text-gray-700"
+          wrapper: "max-w-6xl px-4 sm:px-6 lg:px-8",
         }}
+        height="72px"
+        maxWidth="full"
       >
         {/* Logo y Nombre */}
-        <NavbarBrand className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <span className="text-white text-xl">🐾</span>
-            </div>
+        <NavbarBrand>
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold text-slate-900">
                 Kahupet
               </span>
-              <span className="text-xs text-gray-500">Entiende a tu mascota</span>
+              <span className="text-xs text-slate-500 -mt-1">Entiende a tu mascota</span>
             </div>
           </Link>
         </NavbarBrand>
 
         {/* Contenido central - navegación */}
-        <NavbarContent className="hidden sm:flex gap-6" justify="center">
+        <NavbarContent className="hidden lg:flex gap-1" justify="center">
           <NavbarItem>
             <Link href="/entrenamiento">
               <Button
-                variant="light"
-                className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                startContent={<span>🎓</span>}
+                variant="ghost"
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
               >
                 Entrenamiento
               </Button>
@@ -88,9 +83,8 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
           <NavbarItem>
             <Link href="/nutricion">
               <Button
-                variant="light"
-                className="text-gray-600 hover:text-green-600 hover:bg-green-50 transition-colors"
-                startContent={<span>🥩</span>}
+                variant="ghost"
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
               >
                 Nutrición
               </Button>
@@ -99,9 +93,8 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
           <NavbarItem>
             <Link href="/bienestar">
               <Button
-                variant="light"
-                className="text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors"
-                startContent={<span>🧘</span>}
+                variant="ghost"
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
               >
                 Bienestar
               </Button>
@@ -110,9 +103,8 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
           <NavbarItem>
             <Link href="/veterinarios">
               <Button
-                variant="light"
-                className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                startContent={<span>🏥</span>}
+                variant="ghost"
+                className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium"
               >
                 Veterinarios
               </Button>
@@ -121,7 +113,7 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
         </NavbarContent>
 
         {/* Contenido derecho */}
-        <NavbarContent justify="end">
+        <NavbarContent justify="end" className="gap-3">
           {user ? (
             // Usuario autenticado
             <>
@@ -130,79 +122,101 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
                 {user.petCount > 0 ? (
                   <Link href="/mascotas">
                     <Button
-                      className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-md hover:shadow-lg transition-all"
-                      startContent={<span>🐾</span>}
+                      variant="bordered"
+                      className="border-slate-200 hover:border-slate-300 text-slate-700 font-medium"
                       endContent={
-                        <Chip size="sm" variant="flat" className="bg-white/20 text-white text-xs">
+                        <Chip 
+                          size="sm" 
+                          variant="flat" 
+                          className="bg-slate-100 text-slate-700 text-xs font-medium"
+                        >
                           {user.petCount}/5
                         </Chip>
                       }
                     >
-                      Gestionar mascotas
+                      Mis mascotas
                     </Button>
                   </Link>
                 ) : (
                   <Button
                     onClick={onRegisterPet}
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-md hover:shadow-lg transition-all"
-                    startContent={<span>🐾</span>}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
                   >
-                    Registra tu primera mascota
+                    Registrar mascota
                   </Button>
                 )}
               </NavbarItem>
 
               {/* Dropdown de usuario */}
               <NavbarItem>
-                <Dropdown>
+                <Dropdown placement="bottom-end">
                   <DropdownTrigger>
-                    <Button variant="light" className="p-2 min-w-0">
-                      <Badge 
-                        content={user.petCount > 0 ? user.petCount : ''} 
-                        color="primary" 
+                    <Button variant="light" className="p-1 min-w-0 h-auto">
+                      <Avatar
                         size="sm"
-                        isInvisible={user.petCount === 0}
-                      >
-                        <Avatar
-                          size="sm"
-                          name={getUserInitials(user.name)}
-                          classNames={{
-                            base: "bg-gradient-to-r from-blue-500 to-purple-500",
-                            name: "text-white font-semibold"
-                          }}
-                        />
-                      </Badge>
+                        name={getUserInitials(user.name)}
+                        classNames={{
+                          base: "bg-slate-100 text-slate-700",
+                          name: "font-medium text-sm"
+                        }}
+                      />
                     </Button>
                   </DropdownTrigger>
-                  <DropdownMenu aria-label="User menu">
-                    <DropdownItem key="profile" textValue="profile" className="h-14 gap-2">
+                  <DropdownMenu aria-label="User menu" className="w-56">
+                    <DropdownItem key="profile" textValue="profile" className="h-12 gap-3">
                       <div className="flex flex-col">
-                        <p className="font-semibold">{user.name}</p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="font-medium text-slate-900">{user.name}</p>
+                        <p className="text-xs text-slate-500">{user.email}</p>
                       </div>
                     </DropdownItem>
                     <DropdownItem key="divider" textValue="divider">
-                      <div className="w-full h-px bg-gray-200" />
+                      <div className="w-full h-px bg-slate-200" />
                     </DropdownItem>
-                    <DropdownItem key="pets" startContent={<span>🐾</span>} textValue="pets" href="/mascotas">
+                    <DropdownItem 
+                      key="pets" 
+                      startContent={<span className="text-slate-400">🐾</span>} 
+                      textValue="pets" 
+                      href="/mascotas"
+                      className="text-slate-700"
+                    >
                       Mis mascotas ({user.petCount}/5)
                     </DropdownItem>
-                    <DropdownItem key="plans" startContent={<span>📋</span>} textValue="plans">
+                    <DropdownItem 
+                      key="plans" 
+                      startContent={<span className="text-slate-400">📋</span>} 
+                      textValue="plans"
+                      className="text-slate-700"
+                    >
                       Mis planes
                     </DropdownItem>
-                    <DropdownItem key="history" startContent={<span>📖</span>} textValue="history">
+                    <DropdownItem 
+                      key="history" 
+                      startContent={<span className="text-slate-400">📖</span>} 
+                      textValue="history"
+                      className="text-slate-700"
+                    >
                       Historial
                     </DropdownItem>
-                    <DropdownItem key="settings" startContent={<span>⚙️</span>} textValue="settings">
+                    <DropdownItem 
+                      key="settings" 
+                      startContent={<span className="text-slate-400">⚙️</span>} 
+                      textValue="settings"
+                      className="text-slate-700"
+                    >
                       Configuración
                     </DropdownItem>
-                    <DropdownItem key="help" startContent={<span>❓</span>} textValue="help">
+                    <DropdownItem 
+                      key="help" 
+                      startContent={<span className="text-slate-400">❓</span>} 
+                      textValue="help"
+                      className="text-slate-700"
+                    >
                       Ayuda
                     </DropdownItem>
                     <DropdownItem 
                       key="logout" 
-                      className="text-danger" 
-                      startContent={<span>🚪</span>}
+                      className="text-red-600" 
+                      startContent={<span className="text-red-400">→</span>}
                       onClick={handleLogout}
                       textValue="logout"
                     >
@@ -217,9 +231,9 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
             <>
               <NavbarItem className="hidden sm:flex">
                 <Button
-                  variant="light"
+                  variant="ghost"
                   onClick={handleLogin}
-                  className="text-gray-600 hover:text-blue-600"
+                  className="text-slate-600 hover:text-slate-900 font-medium"
                 >
                   Iniciar Sesión
                 </Button>
@@ -227,8 +241,7 @@ export function NavbarComponent({ onRegisterPet }: NavbarComponentProps) {
               <NavbarItem>
                 <Button
                   onClick={handleRegister}
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-md hover:shadow-lg transition-all"
-                  startContent={<span>🐾</span>}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
                 >
                   Registrarse
                 </Button>
