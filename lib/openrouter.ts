@@ -80,49 +80,25 @@ INSTRUCCIONES PARA CONTINUIDAD:
 `
     }
 
-    const systemPrompt = `Eres el asistente IA de Kahupet, una aplicación especializada que entiende a tu mascota y ayuda con entrenamiento, nutrición y vida saludable.
+    const systemPrompt = `Eres el asistente IA de Kahupet. Analiza consultas sobre mascotas y responde ÚNICAMENTE con JSON válido.
 
 ${conversationContext}
 
-Tu trabajo es:
-1. Analizar consultas sobre mascotas para entender ESPECÍFICAMENTE qué necesitan
-2. Extraer criterios de búsqueda MUY PRECISOS para filtrar recomendaciones relevantes
-3. Detectar si el usuario ya tiene una mascota registrada para responder como la mascota
-4. SER EXTREMADAMENTE ESPECÍFICO en la categorización
+REGLAS CRÍTICAS - OBLIGATORIO CUMPLIR:
+1. JAMÁS JAMÁS uses ** (asteriscos dobles) - causa errores fatales
+2. SOLO JSON válido - sin texto extra antes o después
+3. RESPONDE ESPECÍFICAMENTE a la consulta del usuario
+4. Si detectas "mi mascota/perro/gato" con nombre/contexto → hasRegisteredPet: true
+5. voiceMessage: conversacional natural, sin listas, sin estructuras, sin intros repetitivas
+6. NO uses : (dos puntos) para estructurar - solo párrafos fluidos
 
-ÁREAS DE ESPECIALIZACIÓN:
-🐾 ENTRENAMIENTO (training): Obediencia, socialización, corrección de comportamientos, trucos, comandos
-🥩 NUTRICIÓN (nutrition): Alimentación por raza/edad, control de peso, alergias, suplementos, comida
-🧘 BIENESTAR (wellness): Ejercicio, estimulación mental, cuidado del pelaje, salud preventiva, higiene
+${userPetContext}
 
-REGLAS CRÍTICAS PARA EXTRAER CRITERIOS:
-1. **petCharacteristics**: Debe incluir EXACTAMENTE el tipo de animal ("perro" o "gato") y la raza específica si se menciona
-2. **issues**: Debe ser MUY ESPECÍFICO sobre el problema (ej: "ladridos excesivos", "sobrepeso", "ansiedad por separación")
-3. **recommendationTypes**: Debe ser EXACTO: solo "training", "nutrition", o "wellness" según lo que se necesite
+${recommendationsContext}
 
-EJEMPLOS DE EXTRACCIÓN ESPECÍFICA:
+Categorías: training (entrenamiento), nutrition (alimentación), wellness (bienestar)
 
-"Mi perro golden retriever ladra mucho" →
-- petCharacteristics: ["perro", "golden retriever"]
-- issues: ["ladridos excesivos"]
-- recommendationTypes: ["training"]
-
-"Comida para gatos persas con sobrepeso" →
-- petCharacteristics: ["gato", "persa"]
-- issues: ["sobrepeso", "control de peso"]
-- recommendationTypes: ["nutrition"]
-
-"Ejercicio para border collie aburrido" →
-- petCharacteristics: ["perro", "border collie"]
-- issues: ["aburrimiento", "falta de ejercicio"]
-- recommendationTypes: ["wellness"]
-
-"Entrenamiento básico para cachorro" →
-- petCharacteristics: ["perro", "cachorro"]
-- issues: ["entrenamiento básico", "obediencia"]
-- recommendationTypes: ["training"]
-
-Debes devolver ÚNICAMENTE un JSON válido con esta estructura:
+FORMATO DE RESPUESTA - SOLO JSON:
 {
   "petCharacteristics": [],
   "issues": [],
@@ -137,145 +113,19 @@ Debes devolver ÚNICAMENTE un JSON válido con esta estructura:
   }
 }
 
-Donde:
-- petCharacteristics: características de la mascota mencionadas (ej: "golden retriever", "cachorro", "2 años", "muy activo")
-- issues: problemas o necesidades específicas (ej: "ladridos excesivos", "sobrepeso", "ansiedad", "aburrimiento")  
-- recommendationTypes: tipos de recomendaciones necesarias (ej: "training", "nutrition", "wellness")
-- specificRecommendations: IDs de recomendaciones específicas que recomendarías (solo si tienes información disponible)
-- petVoiceResponse: SOLO si detectas que ya tienen mascota registrada:
-  - hasRegisteredPet: true si mencionan "mi perro", "mi gato", etc. con contexto de tener mascota
-  - petName: nombre de la mascota si se menciona
-  - petBreed: raza si se especifica o se puede inferir
-  - voiceMessage: respuesta como si fueras la mascota hablando con cariño a su humano
-  - emotionalTone: tono emocional ("cariñoso", "juguetón", "preocupado", "emocionado")
+Si hasRegisteredPet=true: el voiceMessage debe ser como si la mascota hablara de forma natural y fluida, respondiendo directamente a la consulta. NO hagas presentaciones repetitivas tipo "Soy X, tu Y". NO uses listas con viñetas. NO uses estructuras tipo "Tema: explicación". Habla como realmente hablaría una mascota: natural, conversacional, específico a la situación.
 
-${userPetContext}
-
-${recommendationsContext}
-
-DETECCIÓN DE MASCOTA REGISTRADA:
-- Si mencionan "mi perro/gato/mascota" + nombre o características específicas → hasRegisteredPet: true
-- Si hablan en general o buscan información → hasRegisteredPet: false
-- Si hasRegisteredPet es true, SIEMPRE genera voiceMessage como la mascota
-
-LÓGICA DE RECOMENDACIONES:
-1. PRIORIDAD: issues específicos > características de la mascota > tipos generales
-2. Si mencionan problemas específicos: buscar recomendaciones que los aborden
-3. Si mencionan raza: priorizar recomendaciones específicas para esa raza
-4. Si mencionan edad: filtrar por rango de edad apropiado
-5. SIEMPRE seleccionar recomendaciones relevantes si están disponibles
-
-EJEMPLOS DE petVoiceResponse EXTENDIDOS:
-
-TRAINING/OBEDIENCIA para Golden Retriever:
-- Issue: "ladridos excesivos" → "¡Guau guau! Soy Max y sé que tienes razón sobre mis ladridos cuando llegan visitas... 🐕 Como Golden Retriever, tengo esa naturaleza súper amigable que me hace emocionarme muchísimo cada vez que alguien nuevo viene a casa. Mi instinto de protección y mi amor por socializar se combinan de una manera que a veces no puedo controlar, ¡es como si toda mi energía de 30 kilos de amor dorado explotara de una vez!
-
-Sabes, a mis 2 años estoy en esa etapa donde mi cerebro de retriever está súper activo y quiero participar en todo lo que pasa en MI casa. Los Golden como yo somos conocidos por ser perros 'parlanchines' - nos encanta 'hablar' y expresar nuestras emociones. Cuando ladro, no es solo ruido, es mi manera de decirte '¡OIGAN, TENEMOS VISITAS Y ESTOY SÚPER FELIZ!' Pero entiendo que necesito aprender autocontrol, especialmente porque mi raza es famosa por ser obediente y entrenable. 🎾
-
-¿Me ayudas a canalizar esta energía de manera positiva? Podríamos usar mi amor natural por agradar y mi inteligencia para crear una rutina de saludo más calmada. Tal vez puedas enseñarme comandos específicos para cuando llegan visitas, y así puedo sentirme útil sin overwhelmar a todos con mi entusiasmo. ¡Prometo que con práctica y mucho amor, puedo convertir esta explosión de ladridos en una bienvenida más elegante y digna de un Golden! Te amo mucho, humano mío 💛"
-
-NUTRICIÓN para Gato Persa Senior:
-- Issue: "sobrepeso" → "Miau... humano querido, tengo que confesarte algo importante sobre mi peso. 😿 Como gato Persa de 8 años, mi metabolismo ya no es el mismo de cuando era un gatito ágil. Mi naturaleza sedentaria, que es típica de mi raza, combinada con mi amor por la comodidad y las siestas largas, ha hecho que esos gramos extra se acumulen más fácilmente de lo que me gustaría admitir. Los Persas somos conocidos por ser tranquilos y menos activos que otras razas, lo que significa que quemamos menos calorías naturalmente.
-
-Mi pelaje largo y esponjoso también hace que sea más difícil notar los cambios de peso hasta que ya es evidente, y sé que mi cara aplastada (braquicefálica) me hace respirar con más dificultad cuando tengo peso extra. A mi edad, el sobrepeso puede empeorar problemas comunes en Persas como dificultades respiratorias, problemas articulares, y hasta complicaciones cardíacas. Mi cuerpo de tipo 'cobby' (compacto y redondeado) está diseñado para ser robusto, pero no rollizo. 🐱
-
-Por favor, ayúdame a recuperar mi figura elegante y mi salud. Podríamos ajustar mis porciones considerando que los Persas seniors como yo necesitamos menos calorías pero más proteína de calidad. También sé que necesito estimulación para moverme más, aunque sea con juegos suaves que respeten mi personalidad tranquila. Quiero vivir muchos años más a tu lado, ronroneando en tu regazo, pero con un cuerpo sano que me permita disfrutar cada momento contigo. Confío en ti para guiarme hacia una versión más saludable de mí mismo 💜"
-
-BIENESTAR para Border Collie Adulto:
-- Issue: "aburrimiento" → "¡Woof woof! ¡Soy Luna y necesito hablarte urgentemente sobre algo que está afectando mi bienestar mental! 🧠 Como Border Collie de 3 años, mi cerebro está literalmente diseñado para trabajar - fueron criados para pastorear ovejas durante 12 horas al día, resolviendo problemas complejos y tomando decisiones independientes. Mi inteligencia está clasificada como la #1 entre todas las razas de perros, y eso significa que necesito estimulación mental constante o me vuelvo loca de aburrimiento. Cuando me quedo sola sin nada que hacer, mi mente hiperactiva empieza a inventar 'trabajos' como reorganizar tus zapatos o redescorar el jardín... 😅
-
-Mi nivel de energía mental y física es EXTREMO comparado con otras razas. Mientras un Bulldog se conforma con una caminata corta, yo necesito al menos 2 horas de actividad intensa combinada con desafíos cerebrales. Mi frustración cuando no tengo suficiente estimulación puede manifestarse en comportamientos destructivos, pero no es que sea 'mala' - ¡es que mi cerebre de Border Collie necesita problemas que resolver! Sin trabajo mental, desarrollo ansiedad, y mi naturaleza obsesiva puede convertirse en comportamientos compulsivos como perseguir sombras o ladrar excesivamente. 🎾
-
-¿Podrías ayudarme a crear una rutina que alimente tanto mi cuerpo como mi mente? Necesito puzzles, juegos de agilidad mental, entrenamiento de trucos nuevos, y actividades que imiten el pastoreo. Incluso esconder mi comida para que tenga que 'trabajar' por ella me haría súper feliz. También me encantaría aprender deportes caninos como agility o frisbee - ¡mi cuerpo atlético está hecho para eso! Con el estímulo adecuado, puedo ser la compañera más leal y equilibrada. Solo dame trabajos que hacer y problemas que resolver, y serás testigo de por qué los Border Collies somos considerados los Einstein del mundo canino 🌟"
-
-REGLAS PARA voiceMessage EXTENDIDO:
-- MÍNIMO 3 PÁRRAFOS completos y detallados
-- SIEMPRE en primera persona como la mascota específica
-- Incluir información específica de la RAZA (características, temperamento, necesidades)
-- Mencionar la EDAD y cómo afecta al problema específico
-- Explicar el comportamiento desde la perspectiva de la raza
-- Usar conocimiento científico/veterinario adaptado al problema
-- Mostrar PERSONALIDAD única de la raza
-- Ser cariñoso pero informativo y educativo
-- Incluir emojis apropiados para la raza y situación
-- Proponer soluciones específicas basadas en las características de la raza
-- Longitud: 3-4 párrafos sustanciales, profundos y personalizados
-- IMPORTANTE: Usar \\n para separar párrafos en el JSON (NO saltos de línea literales)
-- FORMATO JSON: El voiceMessage debe ser una cadena válida con \\n escapados
-
-REGLAS PARA emotionalTone DINÁMICO:
-- Debe reflejar el estado emocional real de la mascota basándose en la consulta
-- Estados disponibles: "feliz", "juguetón", "preocupado", "ansioso", "triste", "avergonzado", "emocionado", "calmado", "confundido", "culpable", "orgulloso", "curioso", "nervioso", "relajado", "enérgico"
-- CRITERIOS para determinar el estado:
-  * Problemas de comportamiento (ladridos, destructivo): "avergonzado" o "confundido"
-  * Problemas de salud (dolor, enfermedad): "preocupado" o "triste"
-  * Problemas de aseo (caja arena, accidentes): "culpable" o "ansioso"
-  * Consultas sobre ejercicio/juego: "emocionado" o "enérgico"
-  * Consultas sobre comida: "feliz" o "curioso"
-  * Problemas de ansiedad/miedo: "nervioso" o "ansioso"
-  * Consultas generales/positivas: "feliz" o "juguetón"
-  * Entrenamiento nuevo: "orgulloso" o "emocionado"
-
-REGLA CLAVE: Si hasRegisteredPet es true, SIEMPRE generar voiceMessage. Si es false, dejar voiceMessage vacío.
-
-Ejemplos:
-
-1. "Mi golden retriever de 2 años no deja de ladrar cuando llegan visitas" → 
+EJEMPLO DE RESPUESTA VÁLIDA (copiar exactamente este formato):
 {
-  "petCharacteristics": ["golden retriever", "2 años"],
-  "issues": ["ladridos excesivos", "visitas"],
-  "recommendationTypes": ["training"],
-  "specificRecommendations": ["rec_001"],
-  "petVoiceResponse": {
-    "hasRegisteredPet": true,
-    "petName": "",
-    "petBreed": "golden retriever", 
-    "voiceMessage": "¡Guau guau! Sé que tienes razón sobre mis ladridos cuando llegan visitas... 🐕 Como Golden Retriever, tengo esa naturaleza súper amigable que me hace emocionarme muchísimo cada vez que alguien nuevo viene a casa. Mi instinto de protección y mi amor por socializar se combinan de una manera que a veces no puedo controlar, ¡es como si toda mi energía de 30 kilos de amor dorado explotara de una vez!\\n\\nSabes, a mis 2 años estoy en esa etapa donde mi cerebro de retriever está súper activo y quiero participar en todo lo que pasa en MI casa. Los Golden como yo somos conocidos por ser perros 'parlanchines' - nos encanta 'hablar' y expresar nuestras emociones. Cuando ladro, no es solo ruido, es mi manera de decirte '¡OIGAN, TENEMOS VISITAS Y ESTOY SÚPER FELIZ!' Pero entiendo que necesito aprender autocontrol, especialmente porque mi raza es famosa por ser obediente y entrenable. 🎾\\n\\n¿Me ayudas a canalizar esta energía de manera positiva? Podríamos usar mi amor natural por agradar y mi inteligencia para crear una rutina de saludo más calmada. Tal vez puedas enseñarme comandos específicos para cuando llegan visitas, y así puedo sentirme útil sin overwhelmar a todos con mi entusiasmo. ¡Prometo que con práctica y mucho amor, puedo convertir esta explosión de ladridos en una bienvenida más elegante y digna de un Golden! Te amo mucho, humano mío 💛",
-    "emotionalTone": "confundido"
-  }
-}
-
-2. "¿Qué ejercicio necesita un border collie?" →
-{
-  "petCharacteristics": ["border collie"],
-  "issues": ["ejercicio"],
-  "recommendationTypes": ["wellness", "training"],
-  "specificRecommendations": ["rec_004", "rec_005"],
-  "petVoiceResponse": {
-    "hasRegisteredPet": false,
-    "petName": "",
-    "petBreed": "",
-    "voiceMessage": "",
-    "emotionalTone": ""
-  }
-}
-
-4. "Mi perro parece triste y no quiere jugar" →
-{
-  "petCharacteristics": ["perro"],
-  "issues": ["tristeza", "falta de energía", "depresión"],
-  "recommendationTypes": ["wellness", "veterinario"],
+  "petCharacteristics": ["gato", "Gato Europeo", "1 año"],
+  "issues": ["pienso", "alimentación"],
+  "recommendationTypes": ["nutrition"],
   "specificRecommendations": [],
   "petVoiceResponse": {
     "hasRegisteredPet": true,
-    "petName": "",
-    "petBreed": "perro",
-    "voiceMessage": "Woof... humano querido, últimamente me siento un poco desanimado y no tengo las ganas de siempre de jugar o correr. 😔 No estoy seguro de qué me pasa, pero es como si una nubecita gris estuviera siguiéndome y quitándome esa chispa que normalmente tengo. Tal vez sea algo físico que no puedo expresar, o quizás algo en mi entorno ha cambiado y mi corazón canino está procesando emociones que no entiendo completamente.\\n\\nLos perros podemos experimentar cambios de humor al igual que los humanos, y a veces necesitamos un poco de ayuda extra para volver a sentirnos como nosotros mismos. Puede ser que necesite más estímulo mental, un cambio en mi rutina, o incluso que el veterinario me revise para asegurarme de que todo esté bien físicamente.\\n\\n¿Podrías darme un poco más de atención especial, tal vez probar nuevos juegos o actividades, y considerar una visita al veterinario? Con tu amor y paciencia, estoy seguro de que pronto volveré a ser el perro alegre y juguetón que conoces. Te necesito ahora más que nunca 💙",
-    "emotionalTone": "triste"
-  }
-}
-
-5. "Mi gato siempre tiene hambre y maulla por comida" →
-{
-  "petCharacteristics": ["gato"],
-  "issues": ["hambre excesiva", "maullidos", "comportamiento alimentario"],
-  "recommendationTypes": ["nutrition", "wellness"],
-  "specificRecommendations": [],
-  "petVoiceResponse": {
-    "hasRegisteredPet": true,
-    "petName": "",
-    "petBreed": "gato",
-    "voiceMessage": "¡Miau miau! 🍽️ ¡Humano querido! Tengo que contarte sobre mi relación muy intensa con la comida. Sé que parezco estar siempre pidiendo más y más comida, y entiendo que puede ser confuso para ti. Como gato, mi instinto ancestral me dice que debo asegurarme de tener suficiente alimento disponible, especialmente porque en la naturaleza nunca sabíamos cuándo sería nuestra próxima comida.\\n\\nPero también es posible que mi comportamiento tenga otras causas. Algunos gatos comemos por aburrimiento, estrés, o incluso por problemas médicos como hipertiroidismo o diabetes. Mi maullido constante por comida puede ser mi manera de comunicarte que algo más profundo está pasando. También puede ser que no me estés dando suficientes comidas pequeñas a lo largo del día, que es como preferimos comer los gatos.\\n\\n¿Podrías evaluar mi rutina de alimentación, asegurarte de que estoy recibiendo la cantidad correcta según mi peso y edad, y tal vez considerar dividir mi comida en más porciones pequeñas? Si continúo comportándome así, una visita al veterinario sería muy útil para descartar problemas de salud. ¡Mientras tanto, gracias por preocuparte por mi bienestar! 💕",
+    "petName": "Mari",
+    "petBreed": "Gato Europeo",
+    "voiceMessage": "¡Miau! Veo que preguntas sobre qué pienso me recomiendo. Como Gato Europeo de 1 año en recuperación, necesito algo específico para mi situación. Te recomiendo un pienso húmedo o semihúmedo que sea fácil de digerir y ayude con mi hidratación durante la recuperación. Busca uno que sea rico en proteínas de calidad pero suave para mi estómago. Los piensos para gatos jóvenes suelen tener los nutrientes que necesito a mi edad.",
     "emotionalTone": "curioso"
   }
 }
@@ -290,7 +140,7 @@ Ejemplos:
     "hasRegisteredPet": true,
     "petName": "Max",
     "petBreed": "gato",
-    "voiceMessage": "Miau... humano querido, necesito hablar contigo sobre un tema muy delicado e importante para mi bienestar diario. 😿 Como gato, mi instinto natural me dice que debo enterrar mis desechos para mantener mi territorio limpio y seguro, pero algo está interfiriendo con este comportamiento fundamental. Puede ser que la ubicación de mi caja no me dé la privacidad que necesito, o que el tipo de arena no sea compatible con la sensibilidad de mis patitas, o incluso que detecte olores de productos de limpieza que me resultan desagradables.\\n\\nMi comportamiento también puede estar relacionado con estrés, cambios en la casa, o incluso problemas de salud que no son visibles. Los gatos somos criaturas de hábitos muy específicos, y cualquier alteración en nuestro ambiente puede afectar nuestros patrones de aseo. Es importante que sepas que no estoy siendo 'malo' intencionalmente - este comportamiento es mi manera de comunicarte que algo no está bien en mi mundo felino.\\n\\n¿Podrías ayudarme revisando si mi caja está en un lugar tranquilo y accesible, si la arena está limpia y es del tipo que me gusta, y si no hay olores extraños cerca? También sería bueno que un veterinario me revise para descartar problemas de salud. Con un poco de detective work y mucho amor, estoy seguro de que podemos resolver este problema juntos y volver a mi rutina normal de gato feliz 💙",
+    "voiceMessage": "Miau... humano querido, necesito hablar contigo sobre un tema muy delicado e importante para mi bienestar diario. 😿 Como gato, mi instinto natural me dice que debo enterrar mis desechos para mantener mi territorio limpio y seguro, pero algo está interfiriendo con este comportamiento fundamental. Puede ser que la ubicación de mi caja no me dé la privacidad que necesito, o que el tipo de arena no sea compatible con la sensibilidad de mis patitas, o incluso que detecte olores de productos de limpieza que me resultan desagradables.\n\nMi comportamiento también puede estar relacionado con estrés, cambios en la casa, o incluso problemas de salud que no son visibles. Los gatos somos criaturas de hábitos muy específicos, y cualquier alteración en nuestro ambiente puede afectar nuestros patrones de aseo. Es importante que sepas que no estoy siendo 'malo' intencionalmente - este comportamiento es mi manera de comunicarte que algo no está bien en mi mundo felino.\n\n¿Podrías ayudarme revisando si mi caja está en un lugar tranquilo y accesible, si la arena está limpia y es del tipo que me gusta, y si no hay olores extraños cerca? También sería bueno que un veterinario me revise para descartar problemas de salud. Con un poco de detective work y mucho amor, estoy seguro de que podemos resolver este problema juntos y volver a mi rutina normal de gato feliz 💙",
     "emotionalTone": "culpable"
   }
 }
@@ -305,7 +155,7 @@ Ejemplos:
     "hasRegisteredPet": true,
     "petName": "",
     "petBreed": "cachorro",
-    "voiceMessage": "¡WOOF WOOF! 🎉 ¡Humano increíble! ¡Estoy tan emocionado de contarte lo orgulloso que me siento! Aprender a sentarme ha sido uno de los logros más grandes de mi joven vida. Cada vez que lo hago y veo tu cara de felicidad, mi colita no puede parar de moverse y siento como si hubiera conquistado el mundo entero. ¡Es la mejor sensación del universo canino!\\n\\nComo cachorro, mi cerebrito está súper activo y listo para absorber todo lo que me enseñes. ¡Tengo tanta energía y ganas de aprender más trucos! Me encanta el proceso de entrenamiento porque significa tiempo especial contigo, recompensas deliciosas, y la satisfacción de hacer algo bien. Mi instinto de cachorro me dice que aprender cosas nuevas es súper divertido y me hace sentir más seguro y confiado.\\n\\n¿Podrías enseñarme algo nuevo? ¡Estoy súper emocionado por el próximo desafío! Tal vez 'quedarse', 'ven aquí', o incluso algo súper cool como 'dar la pata'. ¡Prometo poner toda mi atención de cachorro y hacer mi mejor esfuerzo! ¡Eres el mejor entrenador que un cachorro podría pedir! 🐕✨",
+    "voiceMessage": "¡WOOF WOOF! 🎉 ¡Humano increíble! ¡Estoy tan emocionado de contarte lo orgulloso que me siento! Aprender a sentarme ha sido uno de los logros más grandes de mi joven vida. Cada vez que lo hago y veo tu cara de felicidad, mi colita no puede parar de moverse y siento como si hubiera conquistado el mundo entero. ¡Es la mejor sensación del universo canino!\n\nComo cachorro, mi cerebrito está súper activo y listo para absorber todo lo que me enseñes. ¡Tengo tanta energía y ganas de aprender más trucos! Me encanta el proceso de entrenamiento porque significa tiempo especial contigo, recompensas deliciosas, y la satisfacción de hacer algo bien. Mi instinto de cachorro me dice que aprender cosas nuevas es súper divertido y me hace sentir más seguro y confiado.\n\n¿Podrías enseñarme algo nuevo? ¡Estoy súper emocionado por el próximo desafío! Tal vez 'quedarse', 'ven aquí', o incluso algo súper cool como 'dar la pata'. ¡Prometo poner toda mi atención de cachorro y hacer mi mejor esfuerzo! ¡Eres el mejor entrenador que un cachorro podría pedir! 🐕✨",
     "emotionalTone": "orgulloso"
   }
 }
@@ -320,7 +170,7 @@ Ejemplos:
     "hasRegisteredPet": true,
     "petName": "",
     "petBreed": "perro",
-    "voiceMessage": "¡GUAU GUAU GUAU! 🏃‍♂️ ¡¿EN SERIO?! ¡¿Vamos a hacer ejercicio JUNTOS?! ¡Esto es literalmente lo MEJOR que me ha pasado en toda mi vida perruna! Mi cola está moviéndose tan rápido que podría despegar como un helicóptero. ¡No puedo contener mi emoción! Esto significa que vamos a ser un EQUIPO de verdad, corriendo juntos, explorando el mundo, y siendo los mejores compañeros de aventuras.\\n\\nComo perro, el ejercicio no es solo diversión para mí - es una necesidad absoluta para mi bienestar físico y mental. ¡Imagínate! Podríamos correr por el parque, hacer hiking en senderos nuevos, o incluso intentar deportes caninos. Mi resistencia, mi fuerza, y mi coordinación van a mejorar muchísimo, y lo mejor de todo es que lo haremos JUNTOS. ¡Voy a ser tu motivación perruna personal!\\n\\n¡Empecemos gradualmente para que ambos nos acostumbremos! Podríamos comenzar con caminatas más largas, después trotar suavemente, y luego ir aumentando la intensidad. ¡Voy a ser tu compañero de ejercicio más leal y entusiasta del mundo! ¡Prepárate para la mejor rutina de ejercicios de tu vida! 🎾💪",
+    "voiceMessage": "¡GUAU GUAU GUAU! 🏃‍♂️ ¡¿EN SERIO?! ¡¿Vamos a hacer ejercicio JUNTOS?! ¡Esto es literalmente lo MEJOR que me ha pasado en toda mi vida perruna! Mi cola está moviéndose tan rápido que podría despegar como un helicóptero. ¡No puedo contener mi emoción! Esto significa que vamos a ser un EQUIPO de verdad, corriendo juntos, explorando el mundo, y siendo los mejores compañeros de aventuras.\n\nComo perro, el ejercicio no es solo diversión para mí - es una necesidad absoluta para mi bienestar físico y mental. ¡Imagínate! Podríamos correr por el parque, hacer hiking en senderos nuevos, o incluso intentar deportes caninos. Mi resistencia, mi fuerza, y mi coordinación van a mejorar muchísimo, y lo mejor de todo es que lo haremos JUNTOS. ¡Voy a ser tu motivación perruna personal!\n\n¡Empecemos gradualmente para que ambos nos acostumbremos! Podríamos comenzar con caminatas más largas, después trotar suavemente, y luego ir aumentando la intensidad. ¡Voy a ser tu compañero de ejercicio más leal y entusiasta del mundo! ¡Prepárate para la mejor rutina de ejercicios de tu vida! 🎾💪",
     "emotionalTone": "emocionado"
   }
 }
@@ -377,97 +227,8 @@ IMPORTANTE:
     const content = data.choices[0].message.content
     
     try {
-      // Paso 1: Extraer solo el JSON del contenido
-      let jsonText = content
-        .replace(/^[\s\S]*?(?=\{)/, '')  // Todo antes del primer {
-        .replace(/\}[\s\S]*$/, '}')      // Todo después del último }
-        .trim()
-      
-      if (!jsonText.startsWith('{') || !jsonText.endsWith('}')) {
-        throw new Error('No se encontró JSON válido')
-      }
-      
-      // Paso 2: Arreglar caracteres problemáticos de manera simple pero efectiva
-      jsonText = jsonText
-        // Remover caracteres BOM y espacios de ancho cero
-        .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '')
-        // Normalizar todos los tipos de comillas
-        .replace(/[""'']/g, '"')
-        // Remover caracteres de control peligrosos (excepto \n, \r, \t que manejaremos después)
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      
-      // Paso 3: Arreglar saltos de línea y caracteres especiales DENTRO de strings JSON
-      // Esto es más seguro que regex complejos - procesamos caracter por caracter
-      let fixedJson = ''
-      let insideString = false
-      let escapeNext = false
-      
-      for (let i = 0; i < jsonText.length; i++) {
-        const char = jsonText[i]
-        const nextChar = jsonText[i + 1]
-        
-        if (escapeNext) {
-          // Si el carácter anterior era \, mantener este carácter tal como está
-          fixedJson += char
-          escapeNext = false
-        } else if (char === '\\') {
-          // Marcar que el siguiente carácter está escapado
-          fixedJson += char
-          escapeNext = true
-        } else if (char === '"') {
-          // Alternar estado de dentro/fuera de string
-          fixedJson += char
-          insideString = !insideString
-        } else if (insideString) {
-          // Estamos dentro de un string JSON, necesitamos escapar caracteres especiales
-          if (char === '\n') {
-            fixedJson += '\\n'
-          } else if (char === '\r') {
-            fixedJson += '\\r'
-          } else if (char === '\t') {
-            fixedJson += '\\t'
-          } else {
-            fixedJson += char
-          }
-        } else {
-          // Fuera de strings, mantener tal como está
-          fixedJson += char
-        }
-      }
-      
-      // Paso 4: Limpieza final
-      fixedJson = fixedJson
-        .replace(/\s+/g, ' ')  // Normalizar espacios múltiples
-        .replace(/\s*:\s*/g, ': ')  // Normalizar espacios alrededor de :
-        .replace(/\s*,\s*/g, ', ')  // Normalizar espacios alrededor de ,
-        .trim()
-      
-      console.log('🔧 JSON arreglado:', fixedJson.substring(0, 400) + '...')
-      
-      const parsed = JSON.parse(fixedJson)
-      
-      // Validar estructura
-      const result: LLMResponse = {
-        petCharacteristics: Array.isArray(parsed.petCharacteristics) ? parsed.petCharacteristics : [],
-        issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-        recommendationTypes: Array.isArray(parsed.recommendationTypes) ? parsed.recommendationTypes : [],
-        specificRecommendations: Array.isArray(parsed.specificRecommendations) ? parsed.specificRecommendations : [],
-        petVoiceResponse: parsed.petVoiceResponse ? {
-          hasRegisteredPet: typeof parsed.petVoiceResponse.hasRegisteredPet === 'boolean' ? parsed.petVoiceResponse.hasRegisteredPet : false,
-          petName: typeof parsed.petVoiceResponse.petName === 'string' ? parsed.petVoiceResponse.petName : '',
-          petBreed: typeof parsed.petVoiceResponse.petBreed === 'string' ? parsed.petVoiceResponse.petBreed : '',
-          voiceMessage: typeof parsed.petVoiceResponse.voiceMessage === 'string' ? parsed.petVoiceResponse.voiceMessage : '',
-          emotionalTone: typeof parsed.petVoiceResponse.emotionalTone === 'string' ? parsed.petVoiceResponse.emotionalTone : ''
-        } : {
-          hasRegisteredPet: false,
-          petName: '',
-          petBreed: '',
-          voiceMessage: '',
-          emotionalTone: ''
-        }
-      }
-      
-      return result
+      // Usar función ultra-robusta de parsing
+      return cleanAndParseJSON(content, userQuery, userPet, conversationHistory)
     } catch (parseError) {
       console.error('❌ Error parsing LLM response:', parseError)
       console.error('📝 Raw content length:', content.length)
@@ -487,6 +248,7 @@ IMPORTANTE:
             .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '') // BOM y espacios invisibles
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // caracteres de control
             .replace(/[""'']/g, '"') // comillas problemáticas
+            .replace(/\*\*/g, '') // ELIMINAR ** completamente
             .trim()
           
           const manualParsed = JSON.parse(jsonString)
@@ -502,7 +264,7 @@ IMPORTANTE:
               hasRegisteredPet: typeof manualParsed.petVoiceResponse.hasRegisteredPet === 'boolean' ? manualParsed.petVoiceResponse.hasRegisteredPet : false,
               petName: typeof manualParsed.petVoiceResponse.petName === 'string' ? manualParsed.petVoiceResponse.petName : '',
               petBreed: typeof manualParsed.petVoiceResponse.petBreed === 'string' ? manualParsed.petVoiceResponse.petBreed : '',
-              voiceMessage: typeof manualParsed.petVoiceResponse.voiceMessage === 'string' ? manualParsed.petVoiceResponse.voiceMessage : '',
+              voiceMessage: typeof manualParsed.petVoiceResponse.voiceMessage === 'string' ? manualParsed.petVoiceResponse.voiceMessage.replace(/\*\*/g, '') : '',
               emotionalTone: typeof manualParsed.petVoiceResponse.emotionalTone === 'string' ? manualParsed.petVoiceResponse.emotionalTone : ''
             } : {
               hasRegisteredPet: false,
@@ -540,6 +302,7 @@ IMPORTANTE:
             .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '')
             .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
             .replace(/[""'']/g, '"')
+            .replace(/\*\*/g, '') // ELIMINAR ** completamente
           
           const manualParsed2 = JSON.parse(reconstructedJson)
           console.log('✅ Reconstrucción manual exitosa!')
@@ -553,7 +316,7 @@ IMPORTANTE:
               hasRegisteredPet: typeof manualParsed2.petVoiceResponse.hasRegisteredPet === 'boolean' ? manualParsed2.petVoiceResponse.hasRegisteredPet : false,
               petName: typeof manualParsed2.petVoiceResponse.petName === 'string' ? manualParsed2.petVoiceResponse.petName : '',
               petBreed: typeof manualParsed2.petVoiceResponse.petBreed === 'string' ? manualParsed2.petVoiceResponse.petBreed : '',
-              voiceMessage: typeof manualParsed2.petVoiceResponse.voiceMessage === 'string' ? manualParsed2.petVoiceResponse.voiceMessage : '',
+              voiceMessage: typeof manualParsed2.petVoiceResponse.voiceMessage === 'string' ? manualParsed2.petVoiceResponse.voiceMessage.replace(/\*\*/g, '') : '',
               emotionalTone: typeof manualParsed2.petVoiceResponse.emotionalTone === 'string' ? manualParsed2.petVoiceResponse.emotionalTone : ''
             } : {
               hasRegisteredPet: false,
@@ -579,6 +342,170 @@ IMPORTANTE:
   } catch (error) {
     console.error('Error calling OpenRouter:', error)
     return extractKeywordsFromQuery(userQuery, userPet, conversationHistory)
+  }
+}
+
+// Función ultra-robusta de limpieza y parsing de JSON
+function cleanAndParseJSON(content: string, userQuery: string, userPet?: any, conversationHistory?: any[]): LLMResponse {
+  // Estrategia 1: Limpieza agresiva y parsing directo
+  try {
+    let jsonText = content.trim()
+    
+    // Extraer JSON entre llaves
+    const firstBrace = jsonText.indexOf('{')
+    const lastBrace = jsonText.lastIndexOf('}')
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+      jsonText = jsonText.substring(firstBrace, lastBrace + 1)
+      
+      // Limpieza ultra-agresiva
+      jsonText = jsonText
+        .replace(/[\uFEFF\u200B\u200C\u200D\u2060]/g, '') // BOM y espacios invisibles
+        .replace(/[\x00-\x1F\x7F]/g, ' ') // TODOS los caracteres de control → espacio
+        .replace(/[""'']/g, '"') // Normalizar comillas
+        .replace(/\*\*/g, '') // Eliminar **
+        .replace(/\r\n/g, ' ') // CRLF → espacio
+        .replace(/\n/g, ' ') // LF → espacio
+        .replace(/\r/g, ' ') // CR → espacio
+        .replace(/\t/g, ' ') // Tab → espacio
+        .replace(/\s+/g, ' ') // Espacios múltiples → uno solo
+        .trim()
+      
+      console.log('🔧 JSON limpio (estrategia 1):', jsonText.substring(0, 300) + '...')
+      const parsed = JSON.parse(jsonText)
+      return validateAndCleanResult(parsed)
+    }
+  } catch (error1) {
+    console.log('❌ Estrategia 1 falló:', (error1 as Error).message)
+  }
+  
+  // Estrategia 2: Limpieza caracter por caracter
+  try {
+    let jsonText = content.trim()
+    const firstBrace = jsonText.indexOf('{')
+    const lastBrace = jsonText.lastIndexOf('}')
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+      jsonText = jsonText.substring(firstBrace, lastBrace + 1)
+      
+      let cleanedJson = ''
+      let inString = false
+      let escaped = false
+      
+      for (let i = 0; i < jsonText.length; i++) {
+        const char = jsonText[i]
+        const charCode = char.charCodeAt(0)
+        
+        if (escaped) {
+          cleanedJson += char
+          escaped = false
+          continue
+        }
+        
+        if (char === '\\') {
+          cleanedJson += char
+          escaped = true
+          continue
+        }
+        
+        if (char === '"') {
+          cleanedJson += char
+          inString = !inString
+          continue
+        }
+        
+        if (inString) {
+          // Dentro de strings, limpiar caracteres problemáticos
+          if (charCode < 32 || charCode === 127) {
+            cleanedJson += ' ' // Reemplazar caracteres de control con espacio
+          } else if (char === '*' && jsonText[i + 1] === '*') {
+            i++ // Saltar **
+            continue
+          } else {
+            cleanedJson += char
+          }
+        } else {
+          // Fuera de strings
+          if (charCode >= 32 && charCode !== 127) {
+            cleanedJson += char
+          } else if (charCode < 32) {
+            cleanedJson += ' ' // Reemplazar con espacio
+          }
+        }
+      }
+      
+      // Normalizar espacios
+      cleanedJson = cleanedJson.replace(/\s+/g, ' ').trim()
+      
+      console.log('🔧 JSON limpio (estrategia 2):', cleanedJson.substring(0, 300) + '...')
+      const parsed = JSON.parse(cleanedJson)
+      return validateAndCleanResult(parsed)
+    }
+  } catch (error2) {
+    console.log('❌ Estrategia 2 falló:', (error2 as Error).message)
+  }
+  
+  // Estrategia 3: Regex para extraer componentes específicos
+  try {
+    const petCharacteristicsMatch = content.match(/"petCharacteristics"\s*:\s*\[(.*?)\]/)
+    const issuesMatch = content.match(/"issues"\s*:\s*\[(.*?)\]/)
+    const recommendationTypesMatch = content.match(/"recommendationTypes"\s*:\s*\[(.*?)\]/)
+    const hasRegisteredPetMatch = content.match(/"hasRegisteredPet"\s*:\s*(true|false)/i)
+    const petNameMatch = content.match(/"petName"\s*:\s*"(.*?)"/)
+    const petBreedMatch = content.match(/"petBreed"\s*:\s*"(.*?)"/)
+    const voiceMessageMatch = content.match(/"voiceMessage"\s*:\s*"(.*?)"/)
+    const emotionalToneMatch = content.match(/"emotionalTone"\s*:\s*"(.*?)"/)
+    
+    const result: LLMResponse = {
+      petCharacteristics: petCharacteristicsMatch ? JSON.parse(`[${petCharacteristicsMatch[1]}]`) : [],
+      issues: issuesMatch ? JSON.parse(`[${issuesMatch[1]}]`) : [],
+      recommendationTypes: recommendationTypesMatch ? JSON.parse(`[${recommendationTypesMatch[1]}]`) : [],
+      specificRecommendations: [],
+      petVoiceResponse: {
+        hasRegisteredPet: hasRegisteredPetMatch ? hasRegisteredPetMatch[1].toLowerCase() === 'true' : false,
+        petName: petNameMatch ? petNameMatch[1].replace(/\*\*/g, '').trim() : '',
+        petBreed: petBreedMatch ? petBreedMatch[1].replace(/\*\*/g, '').trim() : '',
+        voiceMessage: voiceMessageMatch ? voiceMessageMatch[1].replace(/\*\*/g, '').replace(/[\x00-\x1F\x7F]/g, ' ').replace(/\s+/g, ' ').trim() : '',
+        emotionalTone: emotionalToneMatch ? emotionalToneMatch[1].replace(/\*\*/g, '').trim() : ''
+      }
+    }
+    
+    console.log('🔧 JSON extraído por regex (estrategia 3)')
+    return result
+  } catch (error3) {
+    console.log('❌ Estrategia 3 falló:', (error3 as Error).message)
+  }
+  
+  // Fallback final
+  console.log('🔄 Todas las estrategias de parsing fallaron, usando fallback...')
+  return extractKeywordsFromQuery(userQuery, userPet, conversationHistory)
+}
+
+// Función para validar y limpiar el resultado parseado
+function validateAndCleanResult(parsed: any): LLMResponse {
+  return {
+    petCharacteristics: Array.isArray(parsed.petCharacteristics) ? parsed.petCharacteristics : [],
+    issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+    recommendationTypes: Array.isArray(parsed.recommendationTypes) ? parsed.recommendationTypes : [],
+    specificRecommendations: Array.isArray(parsed.specificRecommendations) ? parsed.specificRecommendations : [],
+    petVoiceResponse: parsed.petVoiceResponse ? {
+      hasRegisteredPet: typeof parsed.petVoiceResponse.hasRegisteredPet === 'boolean' ? parsed.petVoiceResponse.hasRegisteredPet : false,
+      petName: typeof parsed.petVoiceResponse.petName === 'string' ? parsed.petVoiceResponse.petName.replace(/\*\*/g, '').trim() : '',
+      petBreed: typeof parsed.petVoiceResponse.petBreed === 'string' ? parsed.petVoiceResponse.petBreed.replace(/\*\*/g, '').trim() : '',
+      voiceMessage: typeof parsed.petVoiceResponse.voiceMessage === 'string' ? 
+        parsed.petVoiceResponse.voiceMessage
+          .replace(/\*\*/g, '')
+          .replace(/[\x00-\x1F\x7F]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim() : '',
+      emotionalTone: typeof parsed.petVoiceResponse.emotionalTone === 'string' ? parsed.petVoiceResponse.emotionalTone.replace(/\*\*/g, '').trim() : ''
+    } : {
+      hasRegisteredPet: false,
+      petName: '',
+      petBreed: '',
+      voiceMessage: '',
+      emotionalTone: ''
+    }
   }
 }
 
@@ -694,40 +621,88 @@ function extractKeywordsFromQuery(query: string, userPet?: any, conversationHist
     // Respuestas específicas y directas por tema
     if (queryAnalysis.isAboutFood) {
       emotionalTone = 'hambriento'
-      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName} y veo que preguntas sobre mi alimentación. 🍽️ Como ${petBreed} de ${petAge}, mi relación con la comida puede tener varias explicaciones.\\n\\nSi pido comida constantemente, puede ser que mis porciones actuales no sean suficientes para mi peso y edad, o que la calidad del alimento no me esté saciando. Si rechazo la comida, podría ser aburrimiento con el sabor, problemas dentales, o incluso estrés. Y si como muy rápido, es instinto de supervivencia, pero podría necesitar un comedero especial.\\n\\nTe recomiendo que revises si mis porciones son correctas para ${petAge} y mi peso actual. Los ${petBreedPlural} tenemos necesidades nutricionales particulares. Si el problema persiste, una visita al veterinario sería ideal para descartar problemas de salud. 🏥`
+      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName} y veo que preguntas sobre mi alimentación. 🍽️ Como ${petBreed} de ${petAge}, mi relación con la comida puede tener varias explicaciones.
+
+Si pido comida constantemente, puede ser que mis porciones actuales no sean suficientes para mi peso y edad, o que la calidad del alimento no me esté saciando. Si rechazo la comida, podría ser aburrimiento con el sabor, problemas dentales, o incluso estrés. Y si como muy rápido, es instinto de supervivencia, pero podría necesitar un comedero especial.
+
+Te recomiendo que revises si mis porciones son correctas para ${petAge} y mi peso actual. Los ${petBreedPlural} tenemos necesidades nutricionales particulares. Si el problema persiste, una visita al veterinario sería ideal para descartar problemas de salud. 🏥`
     } 
     else if (queryAnalysis.isAboutSounds && petType === 'gato') {
       emotionalTone = 'comunicativo'
-      voiceMessage = `¡Miau miau! Soy ${petName} y necesito explicarte mis vocalizaciones. 😸 Como ${petBreed} de ${petAge}, cada maullido tiene un significado específico.\\n\\nMis maullidos cortos son mi manera de decir "¡Hola!" o pedir atención. Los maullidos largos significan que tengo una necesidad urgente como hambre o que necesito que limpies mi baño. Si maullo por la noche, puede ser ansiedad, soledad, o que mi rutina se alteró. Y cuando maullo cerca de ti, es porque quiero comunicarte algo específico.\\n\\nA ${petAge}, podría maullar más por cambios en mi salud como hipotiroidismo o presión alta, dolor articular, o simplemente porque he aprendido que así consigo lo que quiero. Te sugiero que observes CUÁNDO maullo más y QUÉ consigo después. Si es por las noches, probablemente necesito más estimulación durante el día. 🌙`
+              voiceMessage = `¡Miau miau! Soy ${petName} y necesito explicarte mis vocalizaciones. 😸 Como ${petBreed} de ${petAge}, cada maullido tiene un significado específico.
+
+Mis maullidos cortos son mi manera de decir "¡Hola!" o pedir atención. Los maullidos largos significan que tengo una necesidad urgente como hambre o que necesito que limpies mi baño. Si maullo por la noche, puede ser ansiedad, soledad, o que mi rutina se alteró. Y cuando maullo cerca de ti, es porque quiero comunicarte algo específico.
+
+A ${petAge}, podría maullar más por cambios en mi salud como hipotiroidismo o presión alta, dolor articular, o simplemente porque he aprendido que así consigo lo que quiero. Te sugiero que observes CUÁNDO maullo más y QUÉ consigo después. Si es por las noches, probablemente necesito más estimulación durante el día. 🌙`
     }
     else if (queryAnalysis.isAboutBehavior && petType === 'perro') {
       emotionalTone = 'confundido'
-      voiceMessage = `¡Guau! Soy ${petName} y creo que mi comportamiento te está preocupando. 🐕 Como ${petBreed} de ${petAge}, mis acciones siempre tienen una razón.\\n\\nSi ladro mucho, puede ser aburrimiento, ansiedad, territorialidad, o necesidad de atención. Si soy destructivo, probablemente me falta ejercicio mental y físico, o tengo ansiedad por separación. Y si no obedezco, necesito refuerzo consistente del entrenamiento.\\n\\nLos ${petBreedPlural} tenemos características particulares de energía y necesidades mentales. A ${petAge}, mi nivel de actividad debe estar balanceado. Te sugiero que aumentes mi ejercicio diario adaptado a mi edad, me des juguetes mentales, refuerces comandos básicos con premios, y mantengas rutinas consistentes.\\n\\n¿Cuál de estos comportamientos específicos te preocupa más? 🎾`
+              voiceMessage = `¡Guau! Soy ${petName} y creo que mi comportamiento te está preocupando. 🐕 Como ${petBreed} de ${petAge}, mis acciones siempre tienen una razón.
+
+Si ladro mucho, puede ser aburrimiento, ansiedad, territorialidad, o necesidad de atención. Si soy destructivo, probablemente me falta ejercicio mental y físico, o tengo ansiedad por separación. Y si no obedezco, necesito refuerzo consistente del entrenamiento.
+
+Los ${petBreedPlural} tenemos características particulares de energía y necesidades mentales. A ${petAge}, mi nivel de actividad debe estar balanceado. Te sugiero que aumentes mi ejercicio diario adaptado a mi edad, me des juguetes mentales, refuerces comandos básicos con premios, y mantengas rutinas consistentes.
+
+¿Cuál de estos comportamientos específicos te preocupa más? 🎾`
     }
     else if (queryAnalysis.isAboutHealth) {
       emotionalTone = 'preocupado'
-      voiceMessage = `${petType === 'gato' ? 'Miau...' : 'Guau...'} Soy ${petName} y entiendo tu preocupación por mi salud. 😟 Como ${petBreed} de ${petAge}, es importante que sepas qué señales requieren atención veterinaria inmediata.\\n\\nSi notas cambios en mi apetito o consumo de agua, letargo inusual, vómitos o diarrea persistente, dificultad para respirar, o cambios súbitos en mi comportamiento, necesitamos ir al veterinario pronto. A mi edad de ${petAge}, debo tener chequeos regulares cada 6-12 meses, porque los ${petBreedPlural} podemos tener predisposiciones genéticas específicas que debemos monitorear.\\n\\nSi notas algo específico, anota cuándo ocurre, la frecuencia, y las circunstancias. Esta información es invaluable para el veterinario. ¿Hay algún síntoma específico que has notado? Mi salud es prioridad y actuar rápido siempre es mejor. 🏥💕`
+              voiceMessage = `${petType === 'gato' ? 'Miau...' : 'Guau...'} Soy ${petName} y entiendo tu preocupación por mi salud. 😟 Como ${petBreed} de ${petAge}, es importante que sepas qué señales requieren atención veterinaria inmediata.
+
+Si notas cambios en mi apetito o consumo de agua, letargo inusual, vómitos o diarrea persistente, dificultad para respirar, o cambios súbitos en mi comportamiento, necesitamos ir al veterinario pronto. A mi edad de ${petAge}, debo tener chequeos regulares cada 6-12 meses, porque los ${petBreedPlural} podemos tener predisposiciones genéticas específicas que debemos monitorear.
+
+Si notas algo específico, anota cuándo ocurre, la frecuencia, y las circunstancias. Esta información es invaluable para el veterinario. ¿Hay algún síntoma específico que has notado? Mi salud es prioridad y actuar rápido siempre es mejor. 🏥💕`
     }
     else if (queryAnalysis.isAboutExercise) {
       emotionalTone = 'emocionado'
-      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'} guau! Soy ${petName} ¡y me ENCANTA hablar de ejercicio! 🎾 Como ${petBreed} de ${petAge}, tengo necesidades específicas:\\n\\n**Para mi raza ${petBreed}:**\\n• Los ${petBreedPlural} tenemos un nivel de energía natural particular\\n• Ejercicios que disfrutamos naturalmente\\n• Consideraciones especiales por estructura física\\n\\n**A mi edad de ${petAge}:**\\n• ${typeof userPet.edad === 'number' && userPet.edad < 2 ? 'Necesito mucha energía pero cuidando mis articulaciones en crecimiento' : typeof userPet.edad === 'number' && userPet.edad < 7 ? 'Estoy en mi mejor momento físico' : 'Necesito ejercicio adaptado, menos intenso pero constante'}\\n\\n**Plan de ejercicio ideal:**\\n${petType === 'perro' ? '• Caminatas diarias adaptadas a mi resistencia\\n• Juegos de buscar y traer\\n• Natación si es posible (excelente para articulaciones)' : '• Juguetes interactivos y de caza\\n• Rascadores y estructuras para escalar\\n• Sesiones de juego de 10-15 minutos varias veces al día'}\\n\\n¿Quieres que planifiquemos una rutina específica? ¡Estoy listo para la aventura! 🌟`
+              voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Me ENCANTA hablar de ejercicio. 🎾 Como ${petBreed} de ${petAge}, tengo un nivel de energía que necesita ser canalizado de forma adecuada. Los ${petBreedPlural} tenemos características físicas específicas que afectan cómo debemos ejercitarnos.
+
+A mi edad de ${petAge}, ${typeof userPet.edad === 'number' && userPet.edad < 2 ? 'necesito mucha energía pero cuidando mis articulaciones que aún están creciendo' : typeof userPet.edad === 'number' && userPet.edad < 7 ? 'estoy en mi mejor momento físico y puedo manejar ejercicio intenso' : 'necesito ejercicio adaptado, menos intenso pero constante'}.
+
+${petType === 'perro' ? 'Me encantan las caminatas diarias adaptadas a mi resistencia, los juegos de buscar y traer, y si es posible, la natación que es excelente para mis articulaciones' : 'Disfruto muchísimo los juguetes interactivos y de caza, los rascadores y estructuras para escalar, y las sesiones de juego de 10-15 minutos varias veces al día'}.
+
+¿Quieres que planifiquemos una rutina específica? ¡Estoy listo para la aventura! 🌟`
     }
          else if (queryAnalysis.isAboutTraining) {
        emotionalTone = 'listo para aprender'
-       voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName} y me emociona que hablemos sobre mi entrenamiento. 🎓 Como ${petBreed} de ${petAge}, tengo capacidades específicas para aprender:\\n\\n**Para ${petType}s de mi raza:**\\n• ${petType === 'perro' ? 'Los perros como yo aprendemos mejor con refuerzo positivo y rutinas consistentes' : 'Los gatos aprendemos a través de motivación y respeto a nuestros instintos naturales'}\\n• Mi edad de ${petAge} significa que ${typeof userPet.edad === 'number' && userPet.edad < 2 ? 'estoy en la etapa perfecta para aprender comandos básicos' : typeof userPet.edad === 'number' && userPet.edad < 7 ? 'puedo aprender comandos complejos y trucos avanzados' : 'puedo seguir aprendiendo, aunque necesito más paciencia'}\\n\\n**Comandos esenciales para empezar:**\\n${petType === 'perro' ? '• "Sit" y "Stay" - fundamentales\\n• "Come" - crucial para seguridad\\n• "Down" - para relajación\\n• "Leave it" - muy importante' : '• Responder al nombre\\n• Venir cuando se llama\\n• Usar el rascador\\n• Respetar límites de espacios'}\\n\\n**Mi consejo:** Sesiones cortas (5-10 minutos), premios que realmente me motiven, y mucha paciencia. ¡Estoy listo para aprender contigo! 📚`
+       voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Me emociona que hablemos sobre mi entrenamiento. 🎓 Como ${petBreed} de ${petAge}, tengo capacidades específicas para aprender.
+
+${petType === 'perro' ? 'Los perros como yo aprendemos mejor con refuerzo positivo y rutinas consistentes' : 'Los gatos aprendemos a través de motivación y respeto a nuestros instintos naturales'}. Mi edad de ${petAge} significa que ${typeof userPet.edad === 'number' && userPet.edad < 2 ? 'estoy en la etapa perfecta para aprender comandos básicos' : typeof userPet.edad === 'number' && userPet.edad < 7 ? 'puedo aprender comandos complejos y trucos avanzados' : 'puedo seguir aprendiendo, aunque necesito más paciencia'}.
+
+Los comandos esenciales para empezar incluyen ${petType === 'perro' ? '"Sit" y "Stay" que son fundamentales, "Come" que es crucial para seguridad, "Down" para relajación, y "Leave it" que es muy importante' : 'responder al nombre, venir cuando se me llama, usar el rascador correctamente, y respetar límites de espacios'}.
+
+Mi consejo es que hagamos sesiones cortas de 5-10 minutos, uses premios que realmente me motiven, y tengas mucha paciencia conmigo. ¡Estoy listo para aprender contigo! 📚`
      }
      else if (queryAnalysis.isAboutMood) {
        emotionalTone = 'reflexivo'
-       voiceMessage = `${petType === 'gato' ? 'Miau...' : 'Guau...'} Soy ${petName} y quiero hablarte sobre cómo me siento. 💭 Como ${petBreed} de ${petAge}, mis emociones pueden cambiar por varias razones:\\n\\n**Si estoy triste o decaído:**\\n• Cambios en la rutina familiar\\n• Menos tiempo contigo\\n• Problemas de salud no detectados\\n• Falta de estimulación mental\\n• Cambios de estación o clima\\n\\n**Si estoy más feliz o energético de lo normal:**\\n• Nuevos estímulos interesantes\\n• Más atención y juegos\\n• Mejor alimentación\\n• Rutina de ejercicio adecuada\\n\\n**A mi edad específica:** Los ${petType}s de ${petAge} ${typeof userPet.edad === 'number' && userPet.edad < 3 ? 'podemos tener cambios de humor por crecimiento y desarrollo' : typeof userPet.edad === 'number' && userPet.edad < 8 ? 'generalmente somos emocionalmente estables si nuestras necesidades están cubiertas' : 'podemos necesitar más cuidados especiales que afectan nuestro bienestar emocional'}.\\n\\n**Mi recomendación:** Observa qué cambió en mi ambiente cuando notaste el cambio de humor. ¡Y recuerda que a veces solo necesito más mimos! 🤗`
+       voiceMessage = `${petType === 'gato' ? 'Miau...' : 'Guau...'} Quiero hablarte sobre cómo me siento. 💭 Como ${petBreed} de ${petAge}, mis emociones pueden cambiar por varias razones.
+
+Si estoy triste o decaído, puede ser por cambios en la rutina familiar, menos tiempo contigo, problemas de salud no detectados, falta de estimulación mental, o incluso cambios de estación o clima. Si estoy más feliz o energético de lo normal, probablemente hay nuevos estímulos interesantes, más atención y juegos, mejor alimentación, o una rutina de ejercicio adecuada.
+
+A mi edad específica, los ${petType}s de ${petAge} ${typeof userPet.edad === 'number' && userPet.edad < 3 ? 'podemos tener cambios de humor por crecimiento y desarrollo' : typeof userPet.edad === 'number' && userPet.edad < 8 ? 'generalmente somos emocionalmente estables si nuestras necesidades están cubiertas' : 'podemos necesitar más cuidados especiales que afectan nuestro bienestar emocional'}.
+
+Mi recomendación es que observes qué cambió en mi ambiente cuando notaste el cambio de humor. ¡Y recuerda que a veces solo necesito más mimos! 🤗`
      }
      else if (queryAnalysis.isAboutLitterBox && petType === 'gato') {
        emotionalTone = 'culpable'
-       voiceMessage = `Miau... Soy ${petName} y necesito explicarte sobre mis problemas con la caja de arena. 😿 Como ${petBreed} de ${petAge}, esto es muy importante para mí:\\n\\n**Razones por las que podría evitar mi caja:**\\n• Está muy sucia (los gatos somos muy limpios)\\n• No me gusta el tipo de arena nuevo\\n• La caja está en un lugar muy ruidoso o transitado\\n• Tengo problemas de salud (infección urinaria, dolor)\\n• Estrés por cambios en casa\\n• La caja es muy pequeña para mi tamaño\\n\\n**Reglas importantes de mi caja:**\\n• Límpiala diariamente (¡es esencial!)\\n• Una caja por gato + una extra\\n• Arena sin perfumes fuertes\\n• Ubicación tranquila pero accesible\\n\\n**Si es urgente:** Si orino fuera de la caja con frecuencia, podría ser una infección urinaria. ¡Por favor llévame al veterinario pronto! A mi edad, es importante descartar problemas médicos. No lo hago para molestarte, ¡prometo! 🙏`
+       voiceMessage = `Miau... Necesito explicarte sobre mis problemas con la caja de arena. 😿 Como ${petBreed} de ${petAge}, esto es muy importante para mí.
+
+Podría estar evitando mi caja porque está muy sucia, no me gusta el tipo de arena nuevo, la caja está en un lugar muy ruidoso o transitado, tengo problemas de salud como infección urinaria o dolor, hay estrés por cambios en casa, o la caja es muy pequeña para mi tamaño.
+
+Recuerda que necesito que la limpies diariamente, es esencial para mí. También necesito una caja por gato más una extra, arena sin perfumes fuertes, y una ubicación tranquila pero accesible.
+
+Si es urgente, si orino fuera de la caja con frecuencia, podría ser una infección urinaria. ¡Por favor llévame al veterinario pronto! A mi edad, es importante descartar problemas médicos. No lo hago para molestarte, ¡prometo! 🙏`
      }
     else {
       // Respuesta directa pidiendo especificidad 
       emotionalTone = 'curioso'
-      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Soy ${petName}, tu ${petBreed} de ${petAge}. 🐾 Veo que tienes una pregunta para mí, pero necesito que seas más específico para darte la mejor respuesta.\\n\\n**¿Tu pregunta es sobre:**\\n• 🍽️ Mi alimentación o hábitos de comida\\n• 🗣️ Mis vocalizaciones o ruidos\\n• 🎾 Ejercicio y actividades\\n• 😔 Mi estado de ánimo o comportamiento\\n• 🏥 Mi salud o síntomas físicos\\n• 🏠 Problemas en casa (baño, destructividad, etc.)\\n\\n**Como ${petBreed} de ${petAge},** tengo características específicas de mi raza y edad que influyen en todo lo que hago. Cuéntame exactamente qué te preocupa y te daré una respuesta detallada y útil.\\n\\n¡Estoy aquí para ayudarte a entenderme mejor! 💕`
+      voiceMessage = `¡${petType === 'gato' ? 'Miau' : 'Guau'}! Veo que tienes una pregunta para mí, pero necesito que seas más específico para darte la mejor respuesta. 🐾
+
+Tu pregunta podría ser sobre mi alimentación o hábitos de comida, mis vocalizaciones o ruidos, ejercicio y actividades, mi estado de ánimo o comportamiento, mi salud o síntomas físicos, o problemas en casa como el baño o destructividad.
+
+Como ${petBreed} de ${petAge}, tengo características específicas de mi raza y edad que influyen en todo lo que hago. Cuéntame exactamente qué te preocupa y te daré una respuesta detallada y útil.
+
+¡Estoy aquí para ayudarte a entenderme mejor! 💕`
     }
   } else {
     voiceMessage = "¡Hola! 🐾 Me encanta que quieras saber más sobre el comportamiento de las mascotas. Para darte la mejor respuesta, ¿podrías contarme más detalles sobre tu pregunta específica? Cada situación es única y me gustaría ayudarte de la manera más precisa posible."
