@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/react'
 import { LoginForm } from './LoginForm'
 import { RegisterForm } from './RegisterForm'
@@ -13,6 +13,11 @@ interface AuthModalProps {
 
 export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode)
+
+  // Actualizar el modo cuando cambie defaultMode
+  useEffect(() => {
+    setMode(defaultMode)
+  }, [defaultMode])
 
   const handleClose = () => {
     setMode('login')
