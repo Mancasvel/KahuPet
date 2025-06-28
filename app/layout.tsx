@@ -6,6 +6,14 @@ import { AuthProvider } from '@/lib/AuthContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+}
+
 export const metadata: Metadata = {
   title: 'Kahupet - Entiende a tu mascota',
   description: 'La aplicación que entiende a tu mascota y te ofrece recomendaciones personalizadas de entrenamiento, nutrición y bienestar usando lenguaje natural.',

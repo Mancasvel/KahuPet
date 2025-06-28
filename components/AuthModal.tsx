@@ -19,6 +19,25 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
     setMode(defaultMode)
   }, [defaultMode])
 
+  // Prevenir scroll del body cuando el modal está abierto
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+      document.body.style.position = 'fixed'
+      document.body.style.width = '100%'
+    } else {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+    }
+
+    return () => {
+      document.body.style.overflow = ''
+      document.body.style.position = ''
+      document.body.style.width = ''
+    }
+  }, [isOpen])
+
   const handleClose = () => {
     setMode('login')
     onClose()
@@ -31,17 +50,28 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
     <Modal 
       isOpen={isOpen} 
       onClose={handleClose}
-      size="full"
+      size="sm"
       backdrop="blur"
       scrollBehavior="inside"
+      placement="center"
       classNames={{
         backdrop: "bg-gradient-to-t from-zinc-900 to-zinc-900/10 backdrop-opacity-20",
-        base: "border border-gray-200 mx-2 my-2 sm:mx-6 sm:my-6 md:mx-auto md:my-auto max-w-lg md:max-w-2xl max-h-[95vh] sm:max-h-[90vh]",
-        header: "border-b-[1px] border-gray-200 px-4 py-3 sm:px-6 sm:py-4",
-        body: "px-4 py-2 sm:px-6 sm:py-4 max-h-[calc(95vh-120px)] overflow-y-auto",
+        base: `
+          border border-gray-200 
+          mx-2 my-auto 
+          sm:mx-6 
+          md:mx-auto 
+          max-w-[calc(100vw-16px)] 
+          sm:max-w-md 
+          max-h-[85vh] 
+          sm:max-h-[80vh]
+          mobile-modal
+        `,
+        header: "border-b-[1px] border-gray-200 px-4 py-3 sm:px-6 sm:py-4 flex-shrink-0",
+        body: "px-4 py-4 sm:px-6 sm:py-6 overflow-y-auto mobile-scroll",
       }}
     >
-      <ModalContent>
+      <ModalContent className="flex flex-col max-h-[85vh]">
         <ModalHeader className="flex flex-col gap-1 flex-shrink-0">
           <div className="text-center">
             <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
@@ -52,8 +82,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
             </p>
           </div>
         </ModalHeader>
-        <ModalBody className="flex-1 overflow-y-auto scrollbar-hide smooth-scroll">
-          <div className="w-full max-w-md mx-auto">
+        <ModalBody className="flex-1 min-h-0">
+          <div className="w-full h-full">
             {mode === 'login' ? (
               <LoginForm 
                 onSwitchToRegister={switchToRegister}

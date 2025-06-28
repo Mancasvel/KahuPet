@@ -26,8 +26,25 @@ body {
     display: none;  /* Chrome, Safari and Opera */
   }
   
-  /* Smooth scrolling for mobile */
-  .smooth-scroll {
+  /* Chrome mobile specific fixes */
+  .mobile-modal {
+    /* Prevent Chrome mobile zoom and positioning issues */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    /* Fix for Chrome mobile viewport issues */
+    position: relative !important;
+  }
+  
+  .mobile-scroll {
+    /* Better touch scrolling for Chrome mobile */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    /* Ensure proper scrolling behavior */
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Chrome mobile specific */
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
@@ -40,7 +57,32 @@ body {
     textarea,
     select {
       font-size: 16px !important;
+      /* Chrome mobile specific */
+      -webkit-appearance: none;
+      appearance: none;
     }
+    
+    /* Chrome mobile modal fixes */
+    .mobile-modal {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) translateZ(0) !important;
+      -webkit-transform: translate(-50%, -50%) translateZ(0) !important;
+      margin: 0 !important;
+    }
+    
+    /* Ensure proper height calculation on Chrome mobile */
+    .mobile-scroll {
+      max-height: calc(85vh - 120px) !important;
+      min-height: 200px;
+    }
+  }
+  
+  /* Smooth scrolling for mobile */
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
   
   /* Mobile-friendly modal positioning */
@@ -67,6 +109,22 @@ body {
       border-radius: 0.5rem;
       max-height: 90vh;
       max-width: 32rem;
+    }
+  }
+  
+  /* Additional Chrome mobile fixes */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS Safari and Chrome mobile */
+    .mobile-modal {
+      /* Fix for iOS Safari address bar */
+      height: -webkit-fill-available !important;
+      min-height: -webkit-fill-available !important;
+    }
+    
+    .mobile-scroll {
+      /* Better scrolling on iOS */
+      -webkit-overflow-scrolling: touch;
+      overflow: auto;
     }
   }
 } 

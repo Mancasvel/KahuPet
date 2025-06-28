@@ -72,132 +72,136 @@ export function RegisterForm({ onSwitchToLogin, onClose }: RegisterFormProps) {
   }
 
   return (
-    <div className="w-full space-y-4 sm:space-y-6">
-      <div className="text-center mb-4 sm:mb-6">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
-          ¡Únete a Kahupet! 🐾
-        </h2>
-        <p className="text-sm sm:text-base text-gray-600">
-          Crea tu cuenta para registrar hasta 5 mascotas
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          type="text"
-          label="Nombre completo"
-          placeholder="Tu nombre"
-          value={formData.name}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          isInvalid={!!validationErrors.name}
-          errorMessage={validationErrors.name}
-          startContent={<span className="text-default-400">👤</span>}
-          variant="bordered"
-          className="w-full"
-          classNames={{
-            input: "text-base", // Prevents zoom on iOS
-            inputWrapper: "min-h-[48px]" // Better touch target
-          }}
-        />
-
-        <Input
-          type="email"
-          label="Email"
-          placeholder="tu@email.com"
-          value={formData.email}
-          onChange={(e) => handleInputChange('email', e.target.value)}
-          isInvalid={!!validationErrors.email}
-          errorMessage={validationErrors.email}
-          startContent={<span className="text-default-400">📧</span>}
-          variant="bordered"
-          className="w-full"
-          classNames={{
-            input: "text-base", // Prevents zoom on iOS
-            inputWrapper: "min-h-[48px]" // Better touch target
-          }}
-        />
-
-        <Input
-          type="password"
-          label="Contraseña"
-          placeholder="Mínimo 6 caracteres"
-          value={formData.password}
-          onChange={(e) => handleInputChange('password', e.target.value)}
-          isInvalid={!!validationErrors.password}
-          errorMessage={validationErrors.password}
-          startContent={<span className="text-default-400">🔒</span>}
-          variant="bordered"
-          className="w-full"
-          classNames={{
-            input: "text-base", // Prevents zoom on iOS
-            inputWrapper: "min-h-[48px]" // Better touch target
-          }}
-        />
-
-        <Input
-          type="password"
-          label="Confirmar contraseña"
-          placeholder="Repite tu contraseña"
-          value={formData.confirmPassword}
-          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-          isInvalid={!!validationErrors.confirmPassword}
-          errorMessage={validationErrors.confirmPassword}
-          startContent={<span className="text-default-400">🔐</span>}
-          variant="bordered"
-          className="w-full"
-          classNames={{
-            input: "text-base", // Prevents zoom on iOS
-            inputWrapper: "min-h-[48px]" // Better touch target
-          }}
-        />
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-red-600 text-sm">{error}</p>
+    <div className="h-full flex flex-col mobile-scroll">
+      <div className="flex-1 overflow-y-auto px-1">
+        <div className="w-full space-y-4 sm:space-y-6 pb-4">
+          <div className="text-center mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
+              ¡Únete a Kahupet! 🐾
+            </h2>
+            <p className="text-sm sm:text-base text-gray-600">
+              Crea tu cuenta para registrar hasta 5 mascotas
+            </p>
           </div>
-        )}
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-start gap-2">
-            <span className="text-blue-500 mt-0.5 text-sm">💡</span>
-            <div className="text-blue-700 text-sm">
-              <p className="font-semibold mb-1 text-sm">¡Beneficios de registrarte!</p>
-              <ul className="text-xs space-y-0.5 leading-relaxed">
-                <li>• Hasta 5 mascotas registradas</li>
-                <li>• Respuestas personalizadas</li>
-                <li>• Historial de consultas</li>
-                <li>• Recomendaciones específicas</li>
-              </ul>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              type="text"
+              label="Nombre completo"
+              placeholder="Tu nombre"
+              value={formData.name}
+              onChange={(e) => handleInputChange('name', e.target.value)}
+              isInvalid={!!validationErrors.name}
+              errorMessage={validationErrors.name}
+              startContent={<span className="text-default-400">👤</span>}
+              variant="bordered"
+              className="w-full"
+              classNames={{
+                input: "text-base !font-normal", // Prevents zoom on iOS
+                inputWrapper: "min-h-[48px]" // Better touch target
+              }}
+            />
+
+            <Input
+              type="email"
+              label="Email"
+              placeholder="tu@email.com"
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              isInvalid={!!validationErrors.email}
+              errorMessage={validationErrors.email}
+              startContent={<span className="text-default-400">📧</span>}
+              variant="bordered"
+              className="w-full"
+              classNames={{
+                input: "text-base !font-normal", // Prevents zoom on iOS
+                inputWrapper: "min-h-[48px]" // Better touch target
+              }}
+            />
+
+            <Input
+              type="password"
+              label="Contraseña"
+              placeholder="Mínimo 6 caracteres"
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              isInvalid={!!validationErrors.password}
+              errorMessage={validationErrors.password}
+              startContent={<span className="text-default-400">🔒</span>}
+              variant="bordered"
+              className="w-full"
+              classNames={{
+                input: "text-base !font-normal", // Prevents zoom on iOS
+                inputWrapper: "min-h-[48px]" // Better touch target
+              }}
+            />
+
+            <Input
+              type="password"
+              label="Confirmar contraseña"
+              placeholder="Repite tu contraseña"
+              value={formData.confirmPassword}
+              onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+              isInvalid={!!validationErrors.confirmPassword}
+              errorMessage={validationErrors.confirmPassword}
+              startContent={<span className="text-default-400">🔐</span>}
+              variant="bordered"
+              className="w-full"
+              classNames={{
+                input: "text-base !font-normal", // Prevents zoom on iOS
+                inputWrapper: "min-h-[48px]" // Better touch target
+              }}
+            />
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <span className="text-blue-500 mt-0.5 text-sm">💡</span>
+                <div className="text-blue-700 text-sm">
+                  <p className="font-semibold mb-1 text-sm">¡Beneficios de registrarte!</p>
+                  <ul className="text-xs space-y-0.5 leading-relaxed">
+                    <li>• Hasta 5 mascotas registradas</li>
+                    <li>• Respuestas personalizadas</li>
+                    <li>• Historial de consultas</li>
+                    <li>• Recomendaciones específicas</li>
+                  </ul>
+                </div>
+              </div>
             </div>
+
+            <Button
+              type="submit"
+              color="primary"
+              size="lg"
+              className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 min-h-[48px]"
+              isLoading={loading}
+              disabled={loading}
+            >
+              {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+            </Button>
+          </form>
+
+          <Divider className="my-4 sm:my-6" />
+
+          <div className="text-center pb-2">
+            <p className="text-gray-600 mb-2 text-sm sm:text-base">
+              ¿Ya tienes una cuenta?
+            </p>
+            <Link
+              as="button"
+              color="primary"
+              onClick={onSwitchToLogin}
+              className="font-semibold text-sm sm:text-base"
+            >
+              Inicia sesión aquí 🐱
+            </Link>
           </div>
         </div>
-
-        <Button
-          type="submit"
-          color="primary"
-          size="lg"
-          className="w-full bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 min-h-[48px]"
-          isLoading={loading}
-          disabled={loading}
-        >
-          {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
-        </Button>
-      </form>
-
-      <Divider className="my-4 sm:my-6" />
-
-      <div className="text-center pb-2">
-        <p className="text-gray-600 mb-2 text-sm sm:text-base">
-          ¿Ya tienes una cuenta?
-        </p>
-        <Link
-          as="button"
-          color="primary"
-          onClick={onSwitchToLogin}
-          className="font-semibold text-sm sm:text-base"
-        >
-          Inicia sesión aquí 🐱
-        </Link>
       </div>
     </div>
   )
