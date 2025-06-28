@@ -1,7 +1,7 @@
 {
-  "name": "komi",
+  "name": "pawsitive",
   "version": "1.0.0",
-  "description": "Aplicación para recomendar platos de restaurantes basándose en descripciones en lenguaje natural",
+  "description": "Aplicación de bienestar para mascotas que utiliza lenguaje natural para ofrecer recomendaciones personalizadas de entrenamiento, nutrición y vida saludable",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

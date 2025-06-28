@@ -41,21 +41,6 @@ export async function POST(request: NextRequest) {
     console.log('  MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
     console.log('  OPENROUTER_API_KEY:', process.env.OPENROUTER_API_KEY ? 'Set' : 'Not set');
     
-    // Debug detallado para MongoDB
-    if (process.env.MONGODB_URI) {
-      console.log('  MongoDB URI length:', process.env.MONGODB_URI.length);
-      console.log('  Contains "demo":', process.env.MONGODB_URI.includes('demo'));
-      console.log('  Contains "username:password":', process.env.MONGODB_URI.includes('username:password'));
-    }
-    
-    // Debug detallado para OpenRouter
-    if (process.env.OPENROUTER_API_KEY) {
-      console.log('  OpenRouter Key length:', process.env.OPENROUTER_API_KEY.length);
-      console.log('  Contains "demo":', process.env.OPENROUTER_API_KEY.includes('demo'));
-      console.log('  Contains "placeholder":', process.env.OPENROUTER_API_KEY.includes('placeholder'));
-      console.log('  Contains "xxxxxxxx":', process.env.OPENROUTER_API_KEY.includes('xxxxxxxx'));
-    }
-    
     console.log('  Valid MongoDB:', hasValidMongoDB);
     console.log('  Valid OpenRouter:', hasValidOpenRouter);
     console.log('  Using demo mode:', useDemo);
@@ -64,42 +49,43 @@ export async function POST(request: NextRequest) {
       // Usar datos de demostración locales
       const demoResponse = getDemoResponse(query)
       return NextResponse.json({ 
-        dishes: demoResponse.dishes,
-        intent: demoResponse.intent,
-        total: demoResponse.dishes.length,
+        recommendations: demoResponse.recommendations,
+        petVoiceResponse: demoResponse.petVoiceResponse,
+        summary: demoResponse.summary,
+        total: demoResponse.recommendations.length,
         demo: true
       })
     }
 
-    // Conectar a MongoDB primero para obtener los platos disponibles
+    // Conectar a MongoDB primero para obtener las recomendaciones disponibles
     if (!client) {
       return NextResponse.json({ error: 'MongoDB client not initialized' }, { status: 500 })
     }
     
     await client.connect()
-    const db = client.db('Komi')
-    const restaurantsCollection = db.collection('Restaurants')
+    const db = client.db('pawsitive')
+    const petsCollection = db.collection('pets')
 
-    // Obtener todos los platos disponibles para pasarlos al LLM
-    const allRestaurants = await restaurantsCollection.find({}).toArray()
-    const allDishes: any[] = []
+    // Obtener todas las recomendaciones disponibles para pasarlas al LLM
+    const allPetProfiles = await petsCollection.find({}).toArray()
+    const allRecommendations: any[] = []
     
-    for (const restaurant of allRestaurants) {
-      for (const dish of restaurant.dishes || []) {
-        allDishes.push({
-          ...dish,
-          restaurant: {
-            name: restaurant.name,
-            address: restaurant.address
-          }
+    for (const petProfile of allPetProfiles) {
+      for (const rec of petProfile.recommendations || []) {
+        allRecommendations.push({
+          ...rec,
+          breed: petProfile.breed,
+          category: petProfile.category,
+          size: petProfile.size,
+          characteristics: petProfile.characteristics
         })
       }
     }
 
-    console.log(`📋 Encontrados ${allDishes.length} platos en ${allRestaurants.length} restaurantes`)
+    console.log(`🐾 Encontradas ${allRecommendations.length} recomendaciones en ${allPetProfiles.length} perfiles de mascotas`)
 
-    // Llamar a OpenRouter con el contexto completo de platos
-    const llmResponse = await callOpenRouter(query, allDishes)
+    // Llamar a OpenRouter con el contexto completo de recomendaciones
+    const llmResponse = await callOpenRouter(query, allRecommendations)
     
     if (!llmResponse) {
       return NextResponse.json({ error: 'Error processing query' }, { status: 500 })
@@ -110,304 +96,270 @@ export async function POST(request: NextRequest) {
     // Construir filtros de búsqueda basados en la respuesta del LLM
     const searchFilters: any = {}
     
-    // Filtrar por ingredientes si están especificados
-    if (llmResponse.ingredientes && llmResponse.ingredientes.length > 0) {
-      searchFilters['dishes.ingredients'] = {
-        $in: llmResponse.ingredientes.map((ing: string) => new RegExp(ing, 'i'))
+    // Filtrar por características de mascota si están especificadas
+    if (llmResponse.petCharacteristics && llmResponse.petCharacteristics.length > 0) {
+      const breedFilters = llmResponse.petCharacteristics.filter(char => 
+        char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine coon')
+      )
+      
+      if (breedFilters.length > 0) {
+        searchFilters['breed'] = {
+          $in: breedFilters.map((breed: string) => new RegExp(breed, 'i'))
+        }
       }
-    }
-
-    // Filtrar por tags/restricciones
-    if (llmResponse.restricciones && llmResponse.restricciones.length > 0) {
-      searchFilters['dishes.tags'] = {
-        $in: llmResponse.restricciones.map((tag: string) => new RegExp(tag, 'i'))
-      }
-    }
-
-    // Filtrar por categorías
-    if (llmResponse.categorias && llmResponse.categorias.length > 0) {
-      if (searchFilters['dishes.tags']) {
-        searchFilters['dishes.tags']['$in'] = [
-          ...searchFilters['dishes.tags']['$in'],
-          ...llmResponse.categorias.map((cat: string) => new RegExp(cat, 'i'))
-        ]
-      } else {
-        searchFilters['dishes.tags'] = {
-          $in: llmResponse.categorias.map((cat: string) => new RegExp(cat, 'i'))
+      
+      // Filtrar por categoría (perro, gato)
+      const categoryFilters = llmResponse.petCharacteristics.filter(char => 
+        char.includes('perro') || char.includes('gato')
+      )
+      
+      if (categoryFilters.length > 0) {
+        searchFilters['category'] = {
+          $in: categoryFilters.map((cat: string) => new RegExp(cat, 'i'))
         }
       }
     }
 
-    // Buscar restaurantes que tengan platos que coincidan
-    const restaurants = await restaurantsCollection
+    // Filtrar por tipo de recomendación
+    if (llmResponse.recommendationTypes && llmResponse.recommendationTypes.length > 0) {
+      searchFilters['recommendations.type'] = {
+        $in: llmResponse.recommendationTypes
+      }
+    }
+
+    // Filtrar por issues/problemas específicos
+    if (llmResponse.issues && llmResponse.issues.length > 0) {
+      searchFilters['recommendations.tags'] = {
+        $in: llmResponse.issues.map((issue: string) => new RegExp(issue, 'i'))
+      }
+    }
+
+    // Buscar perfiles de mascotas que tengan recomendaciones que coincidan
+    const petProfiles = await petsCollection
       .find(searchFilters)
       .limit(20)
       .toArray()
 
     // Priorizar recomendaciones específicas del LLM
-    let matchingDishes: any[] = []
+    let matchingRecommendations: any[] = []
     
     // Si el LLM hizo recomendaciones específicas, usarlas primero
-    if (llmResponse.recomendaciones && llmResponse.recomendaciones.length > 0) {
-      console.log('🎯 Usando recomendaciones específicas del LLM:', llmResponse.recomendaciones)
+    if (llmResponse.specificRecommendations && llmResponse.specificRecommendations.length > 0) {
+      console.log('🎯 Usando recomendaciones específicas del LLM:', llmResponse.specificRecommendations)
       
-      const recommendedDishes = allDishes.filter(dish => 
-        llmResponse.recomendaciones.includes(dish._id)
+      const specificRecs = allRecommendations.filter(rec => 
+        llmResponse.specificRecommendations.includes(rec._id)
       )
       
-      matchingDishes.push(...recommendedDishes)
+      matchingRecommendations.push(...specificRecs)
     }
     
-    // Luego, buscar platos adicionales usando los criterios extraídos
-    const additionalDishes: any[] = []
+    // Luego, buscar recomendaciones adicionales usando los criterios extraídos
+    const additionalRecommendations: any[] = []
     
-    for (const dish of allDishes) {
+    for (const rec of allRecommendations) {
       // Evitar duplicados con las recomendaciones específicas
-      if (llmResponse.recomendaciones?.includes(dish._id)) {
+      if (llmResponse.specificRecommendations?.includes(rec._id)) {
         continue
       }
       
       let matches = true
       let relevanceScore = 0
       
-      // Verificar ingredientes
-      if (llmResponse.ingredientes && llmResponse.ingredientes.length > 0) {
-        const hasIngredient = llmResponse.ingredientes.some((ing: string) =>
-          dish.ingredients?.some((dishIng: string) =>
-            dishIng.toLowerCase().includes(ing.toLowerCase())
-          )
-        )
-        if (hasIngredient) {
+      // Verificar tipo de recomendación
+      if (llmResponse.recommendationTypes && llmResponse.recommendationTypes.length > 0) {
+        if (llmResponse.recommendationTypes.includes(rec.type)) {
           relevanceScore += 3
         } else {
           matches = false
         }
       }
 
-      // Verificar restricciones/preferencias
-      if (llmResponse.restricciones && llmResponse.restricciones.length > 0) {
-        const restrictionMatches = llmResponse.restricciones.filter((rest: string) =>
-          dish.tags?.some((tag: string) =>
-            tag.toLowerCase().includes(rest.toLowerCase())
+      // Verificar issues/problemas específicos
+      if (llmResponse.issues && llmResponse.issues.length > 0) {
+        const issueMatches = llmResponse.issues.filter((issue: string) =>
+          rec.tags?.some((tag: string) =>
+            tag.toLowerCase().includes(issue.toLowerCase())
           )
         )
-        if (restrictionMatches.length > 0) {
-          relevanceScore += restrictionMatches.length * 2
-        } else if (llmResponse.restricciones.some(r => ['vegano', 'vegetariano', 'sin gluten'].includes(r.toLowerCase()))) {
-          // Restricciones estrictas deben cumplirse
-          matches = false
+        if (issueMatches.length > 0) {
+          relevanceScore += issueMatches.length * 2
         }
       }
 
-      // Verificar categorías de cocina
-      if (llmResponse.categorias && llmResponse.categorias.length > 0) {
-        const categoryMatches = llmResponse.categorias.filter((cat: string) =>
-          dish.tags?.some((tag: string) =>
-            tag.toLowerCase().includes(cat.toLowerCase())
-          )
+      // Verificar características de la mascota
+      if (llmResponse.petCharacteristics && llmResponse.petCharacteristics.length > 0) {
+        const charMatches = llmResponse.petCharacteristics.filter((char: string) =>
+          rec.breed?.toLowerCase().includes(char.toLowerCase()) ||
+          rec.category?.toLowerCase().includes(char.toLowerCase())
         )
-        if (categoryMatches.length > 0) {
-          relevanceScore += categoryMatches.length
+        if (charMatches.length > 0) {
+          relevanceScore += charMatches.length
         }
       }
 
-      if (matches && (relevanceScore > 0 || 
-          (!llmResponse.ingredientes?.length && !llmResponse.restricciones?.length && !llmResponse.categorias?.length))) {
-        additionalDishes.push({
-          ...dish,
+      if (matches && relevanceScore > 0) {
+        additionalRecommendations.push({
+          ...rec,
           relevanceScore
         })
       }
     }
-    
-    // Ordenar platos adicionales por relevancia
-    additionalDishes.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
-    
-    // Combinar recomendaciones específicas con búsqueda general
-    matchingDishes.push(...additionalDishes.slice(0, 8)) // Limitar platos adicionales
 
-    // Limitar resultados y ordenar por relevancia (precio)
-    const limitedDishes = matchingDishes
-      .sort((a, b) => a.price - b.price)
-      .slice(0, 12)
+    // Ordenar por relevancia y tomar los mejores
+    additionalRecommendations.sort((a, b) => b.relevanceScore - a.relevanceScore)
+    matchingRecommendations.push(...additionalRecommendations.slice(0, 10))
 
-    return NextResponse.json({ 
-      dishes: limitedDishes,
-      intent: llmResponse,
-      total: limitedDishes.length
+    // Si no hay coincidencias específicas, mostrar recomendaciones generales
+    if (matchingRecommendations.length === 0) {
+      console.log('ℹ️ No se encontraron coincidencias específicas, mostrando recomendaciones generales')
+      matchingRecommendations = allRecommendations.slice(0, 6)
+    }
+
+    const summary = generateSummary(query, llmResponse, matchingRecommendations.length)
+
+    await client.close()
+
+    return NextResponse.json({
+      recommendations: matchingRecommendations,
+      petVoiceResponse: llmResponse.petVoiceResponse,
+      petCharacteristics: llmResponse.petCharacteristics,
+      issues: llmResponse.issues,
+      recommendationTypes: llmResponse.recommendationTypes,
+      summary,
+      total: matchingRecommendations.length
     })
 
   } catch (error) {
-    console.error('Error in parse API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  } finally {
-    if (client) {
-      await client.close()
-    }
+    console.error('Error processing pet query:', error)
+    return NextResponse.json({ error: 'Error processing query' }, { status: 500 })
   }
 }
 
-// Función para generar respuestas de demostración locales
+function generateSummary(query: string, llmResponse: any, totalRecommendations: number): string {
+  if (llmResponse.petVoiceResponse?.hasRegisteredPet) {
+    const petName = llmResponse.petVoiceResponse.petName || 'tu mascota'
+    const issues = llmResponse.issues || []
+    
+    if (issues.length > 0) {
+      return `💬 ${petName} necesita ayuda con: ${issues.join(', ')}. Encontré ${totalRecommendations} recomendaciones personalizadas.`
+    } else {
+      return `💬 ${petName} está listo para nuevas aventuras. ${totalRecommendations} recomendaciones disponibles.`
+    }
+  }
+  
+  const characteristics = llmResponse.petCharacteristics || []
+  const types = llmResponse.recommendationTypes || []
+  
+  if (characteristics.length > 0 && types.length > 0) {
+    return `🔍 Buscar recomendaciones de ${types.join(', ')} para ${characteristics.join(', ')}. ${totalRecommendations} resultados encontrados.`
+  } else if (characteristics.length > 0) {
+    return `🐾 Recomendaciones para ${characteristics.join(', ')}: ${totalRecommendations} opciones disponibles.`
+  } else if (types.length > 0) {
+    return `📋 Recomendaciones de ${types.join(', ')}: ${totalRecommendations} sugerencias encontradas.`
+  }
+  
+  return `🎯 Recomendaciones de bienestar para tu mascota: ${totalRecommendations} opciones disponibles.`
+}
+
 function getDemoResponse(query: string) {
   const lowerQuery = query.toLowerCase()
   
-  // Datos de demostración locales
-  const demoDishes = [
+  // Detectar si tiene mascota registrada
+  const hasRegisteredPet = lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota'))
+  
+  // Recomendaciones de demostración
+  const demoRecommendations = [
     {
-      _id: "demo1",
-      name: "Pasta Primavera Vegana",
-      description: "Deliciosa pasta con verduras de temporada, sin productos animales",
-      ingredients: ["pasta", "calabacín", "tomate", "albahaca", "aceite de oliva"],
-      tags: ["vegano", "vegetariano", "italiano", "rápido"],
-      price: 12.50,
-      image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=500&h=300&fit=crop",
-      restaurant: {
-        name: "La Toscana",
-        address: "Calle Gran Vía 15, Madrid"
-      }
+      _id: "demo_001",
+      type: "training",
+      title: "Entrenamiento básico de obediencia",
+      description: "Técnicas fundamentales para enseñar comandos básicos como sentado, quieto y venir.",
+      breed: "General",
+      category: "Perro",
+      tags: ["obediencia", "básico", "comandos"],
+      difficulty: "Fácil",
+      duration: "15-20 minutos diarios",
+      ageRange: "8 semanas+",
+      image: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=500&h=300&fit=crop"
     },
     {
-      _id: "demo2",
-      name: "Risotto de Pollo",
-      description: "Cremoso risotto con pollo y champiñones, cocción tradicional",
-      ingredients: ["arroz", "pollo", "champiñones", "cebolla", "queso parmesano"],
-      tags: ["tradicional", "italiano", "con carne"],
-      price: 16.00,
-      image: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=500&h=300&fit=crop",
-      restaurant: {
-        name: "La Toscana",
-        address: "Calle Gran Vía 15, Madrid"
-      }
+      _id: "demo_002",
+      type: "nutrition",
+      title: "Alimentación equilibrada para cachorros",
+      description: "Guía completa de nutrición para el crecimiento saludable de cachorros.",
+      breed: "General",
+      category: "Perro",
+      tags: ["cachorro", "crecimiento", "nutrición"],
+      difficulty: "Fácil",
+      duration: "Continuo",
+      ageRange: "2-12 meses",
+      image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=500&h=300&fit=crop"
     },
     {
-      _id: "demo3",
-      name: "Paella Valenciana",
-      description: "Auténtica paella con pollo, conejo y verduras, arroz bomba",
-      ingredients: ["arroz", "pollo", "conejo", "judías verdes", "tomate", "pimentón"],
-      tags: ["española", "tradicional", "con carne"],
-      price: 18.00,
-      image: "https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=500&h=300&fit=crop",
-      restaurant: {
-        name: "El Rincón Español",
-        address: "Plaza Mayor 8, Madrid"
-      }
-    },
-    {
-      _id: "demo4",
-      name: "Gazpacho Andaluz",
-      description: "Refrescante sopa fría de tomate, ideal para el verano",
-      ingredients: ["tomate", "pepino", "pimiento", "cebolla", "ajo", "aceite de oliva"],
-      tags: ["vegano", "vegetariano", "española", "rápido", "frío"],
-      price: 8.00,
-      image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500&h=300&fit=crop",
-      restaurant: {
-        name: "El Rincón Español",
-        address: "Plaza Mayor 8, Madrid"
-      }
-    },
-    {
-      _id: "demo5",
-      name: "Sushi Vegano",
-      description: "Variedad de sushi con aguacate, pepino y verduras",
-      ingredients: ["arroz", "aguacate", "pepino", "zanahoria", "alga nori"],
-      tags: ["vegano", "vegetariano", "asiática", "japonesa", "rápido"],
-      price: 15.00,
-      image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=500&h=300&fit=crop",
-      restaurant: {
-        name: "Sakura Sushi",
-        address: "Calle Serrano 42, Madrid"
-      }
-    },
-    {
-      _id: "demo6",
-      name: "Bowl Buddha Energético",
-      description: "Bowl completo con quinoa, verduras y proteína vegetal",
-      ingredients: ["quinoa", "garbanzos", "aguacate", "espinacas", "tomate cherry"],
-      tags: ["vegano", "vegetariano", "saludable", "sin gluten", "rápido"],
-      price: 11.50,
-      image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&h=300&fit=crop",
-      restaurant: {
-        name: "Green Garden",
-        address: "Calle Fuencarral 25, Madrid"
-      }
+      _id: "demo_003",
+      type: "wellness",
+      title: "Rutina de ejercicio diario",
+      description: "Plan de actividades físicas adaptado a las necesidades de tu mascota.",
+      breed: "General",
+      category: "Perro",
+      tags: ["ejercicio", "rutina", "salud"],
+      difficulty: "Moderado",
+      duration: "30-60 minutos",
+      ageRange: "6 meses+",
+      image: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=500&h=300&fit=crop"
     }
   ]
 
-  // Filtrar platos basándose en palabras clave simples
-  let filteredDishes = demoDishes
-
-  if (lowerQuery.includes('vegano')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.tags.includes('vegano') || dish.tags.includes('vegetariano')
-    )
+  // Filtrar recomendaciones basadas en la consulta
+  let filteredRecommendations = demoRecommendations
+  
+  if (lowerQuery.includes('entren') || lowerQuery.includes('obediencia') || lowerQuery.includes('ladra')) {
+    filteredRecommendations = demoRecommendations.filter(r => r.type === 'training')
+  } else if (lowerQuery.includes('comida') || lowerQuery.includes('alimenta') || lowerQuery.includes('dieta')) {
+    filteredRecommendations = demoRecommendations.filter(r => r.type === 'nutrition')
+  } else if (lowerQuery.includes('ejercicio') || lowerQuery.includes('jugar') || lowerQuery.includes('aburrimiento')) {
+    filteredRecommendations = demoRecommendations.filter(r => r.type === 'wellness')
   }
 
-  if (lowerQuery.includes('arroz')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.ingredients.includes('arroz')
-    )
+  // Generar respuesta de voz si tiene mascota registrada
+  let petVoiceResponse = {
+    hasRegisteredPet: false,
+    petName: '',
+    petBreed: '',
+    voiceMessage: '',
+    emotionalTone: ''
   }
 
-  if (lowerQuery.includes('rápido')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.tags.includes('rápido')
-    )
-  }
+  if (hasRegisteredPet) {
+    petVoiceResponse = {
+      hasRegisteredPet: true,
+      petName: 'tu mascota',
+      petBreed: lowerQuery.includes('perro') ? 'perro' : 'gato',
+      voiceMessage: "¡Hola humano! 🐾 Veo que buscas formas de ayudarme a ser mejor. ¡Me encanta aprender cosas nuevas contigo!",
+      emotionalTone: 'emocionado'
+    }
 
-  if (lowerQuery.includes('picante')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.tags.includes('picante')
-    )
-  }
-
-  if (lowerQuery.includes('sin picante')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      !dish.tags.includes('picante')
-    )
-  }
-
-  if (lowerQuery.includes('español') || lowerQuery.includes('española')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.tags.includes('española')
-    )
-  }
-
-  if (lowerQuery.includes('tradicional')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.tags.includes('tradicional')
-    )
-  }
-
-  if (lowerQuery.includes('sin gluten')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.tags.includes('sin gluten')
-    )
-  }
-
-  if (lowerQuery.includes('pollo')) {
-    filteredDishes = filteredDishes.filter(dish => 
-      dish.ingredients.includes('pollo')
-    )
-  }
-
-  // Si no hay filtros específicos o no hay resultados, mostrar algunos platos aleatorios
-  if (filteredDishes.length === 0 || filteredDishes.length === demoDishes.length) {
-    filteredDishes = demoDishes.slice(0, 4) // Mostrar los primeros 4
-  }
-
-  return {
-    dishes: filteredDishes.slice(0, 6), // Limitar a 6 resultados
-    intent: {
-      ingredientes: extractKeywords(lowerQuery, ['arroz', 'pollo', 'tomate', 'quinoa']),
-      restricciones: extractKeywords(lowerQuery, ['vegano', 'sin gluten', 'rápido', 'sin picante']),
-      categorias: extractKeywords(lowerQuery, ['española', 'italiana', 'asiática', 'tradicional'])
+    // Personalizar mensaje según el problema
+    if (lowerQuery.includes('ladra')) {
+      petVoiceResponse.voiceMessage = "¡Guau! Sé que a veces ladro mucho... es que me emociono. ¿Me ayudas a aprender cuándo estar tranquilo? 🐕"
+      petVoiceResponse.emotionalTone = 'juguetón'
+    } else if (lowerQuery.includes('aburrimiento') || lowerQuery.includes('aburro')) {
+      petVoiceResponse.voiceMessage = "¡Oye! Me aburro cuando no estás. ¿Podríamos hacer juegos nuevos juntos? ¡Prometo no destruir nada! 😅"
+      petVoiceResponse.emotionalTone = 'juguetón'
+    } else if (lowerQuery.includes('comida') || lowerQuery.includes('peso')) {
+      petVoiceResponse.voiceMessage = "Humano... creo que me das demasiadas chuches deliciosas. Ayúdame a estar fuerte y saludable, ¿sí? 🥺"
+      petVoiceResponse.emotionalTone = 'preocupado'
     }
   }
-}
 
-function extractKeywords(query: string, keywords: string[]): string[] {
-  return keywords.filter(keyword => query.includes(keyword))
+  const summary = hasRegisteredPet 
+    ? `🧪 Modo Demo - ${petVoiceResponse.petName} necesita tu ayuda. ${filteredRecommendations.length} recomendaciones encontradas.`
+    : `🧪 Modo Demo - Recomendaciones de bienestar para mascotas. ${filteredRecommendations.length} sugerencias disponibles.`
+
+  return {
+    recommendations: filteredRecommendations,
+    petVoiceResponse,
+    summary
+  }
 } 

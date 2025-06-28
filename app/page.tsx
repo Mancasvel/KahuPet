@@ -2,114 +2,97 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { Input, Button, Card, CardBody, Divider, Spinner, Badge } from '@heroui/react'
-import { RestaurantCard } from '@/components/RestaurantCard'
-import { DynamicMenuCard } from '@/components/DynamicMenuCard'
+import { PetCard } from '@/components/PetCard'
+import { RecommendationCard } from '@/components/RecommendationCard'
+import { PetVoiceChat } from '@/components/PetVoiceChat'
 import { NavbarComponent } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
 
-interface CartItem {
-  id: string
-  name: string
-  price: number
-  quantity: number
-  type: 'dish' | 'menu'
-  restaurantId: string
-  restaurantName: string
+interface Recommendation {
+  _id: string
+  type: 'training' | 'nutrition' | 'wellness'
+  title: string
+  description: string
+  breed: string
+  category: string
+  tags?: string[]
+  difficulty: string
+  duration: string
+  ageRange: string
+  image?: string
+  portions?: string
 }
 
-interface Restaurant {
+interface PetProfile {
   _id: string
-  name: string
-  description: string
-  address: string
-  phone: string
-  cuisine: string[]
-  rating: number
-  priceRange: string
-  deliveryTime: string
-  minOrder: number
-  dishes: any[]
-  groupMenus?: any[]
+  breed: string
+  category: string
+  size: string
+  characteristics: {
+    energy: string
+    temperament: string[]
+    lifespan: string
+    weight: string
+    exerciseNeeds: string
+  }
+  commonIssues: string[]
+  recommendations: Recommendation[]
+}
+
+interface PetVoiceResponse {
+  hasRegisteredPet: boolean
+  petName?: string
+  petBreed?: string
+  voiceMessage: string
+  emotionalTone: string
 }
 
 export default function Home() {
   const [query, setQuery] = useState('')
-  const [restaurants, setRestaurants] = useState<Restaurant[]>([])
-  const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
+  const [petProfiles, setPetProfiles] = useState<PetProfile[]>([])
+  const [allPetProfiles, setAllPetProfiles] = useState<PetProfile[]>([])
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [summary, setSummary] = useState('')
-  const [isMCPMode, setIsMCPMode] = useState(false)
-  const [cartItems, setCartItems] = useState<CartItem[]>([])
-  const [groupSuggestion, setGroupSuggestion] = useState<any>(null)
-  const [dynamicMenu, setDynamicMenu] = useState<any[]>([])
+  const [petVoiceResponse, setPetVoiceResponse] = useState<PetVoiceResponse | null>(null)
+  const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([])
+  const [searchMode, setSearchMode] = useState<'profiles' | 'recommendations'>('recommendations')
 
-  // Cargar todos los restaurantes al inicio
-  const loadAllRestaurants = useCallback(async () => {
+  // Cargar todos los perfiles de mascotas al inicio
+  const loadAllPetProfiles = useCallback(async () => {
     try {
-      const response = await fetch('/api/restaurants')
+      const response = await fetch('/api/pets')
       if (response.ok) {
         const data = await response.json()
-        setAllRestaurants(data)
-        setRestaurants(data)
+        setAllPetProfiles(data)
+        setPetProfiles(data)
       }
     } catch (error) {
-      console.error('Error cargando restaurantes:', error)
+      console.error('Error cargando perfiles de mascotas:', error)
     }
   }, [])
 
-  // Cargar restaurantes al montar el componente
+  // Cargar perfiles al montar el componente
   useEffect(() => {
-    loadAllRestaurants()
-  }, [loadAllRestaurants])
+    loadAllPetProfiles()
+  }, [loadAllPetProfiles])
 
-  const searchDishes = async () => {
+  const searchPetCare = async () => {
     if (!query.trim()) {
-      setRestaurants(allRestaurants)
+      setPetProfiles(allPetProfiles)
+      setRecommendations([])
       setSummary('')
-      setGroupSuggestion(null)
+      setPetVoiceResponse(null)
       return
     }
 
     setIsLoading(true)
     setSummary('')
-    setGroupSuggestion(null)
-    setDynamicMenu([])
+    setPetVoiceResponse(null)
+    setRecommendations([])
     
     try {
-      // Intentar primero con MCP (LLM + Base de datos)
-      const mcpResponse = await fetch('/api/mcp-parse', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
-      })
-
-      if (mcpResponse.ok) {
-        const mcpData = await mcpResponse.json()
-        
-        setIsMCPMode(true)
-        setSummary(mcpData.summary || `Resultados para: "${query}"`)
-        setGroupSuggestion(mcpData.groupSuggestion)
-        setDynamicMenu(mcpData.dynamicMenu || [])
-
-        // Si hay restaurantes específicos recomendados, usarlos
-        if (mcpData.restaurants && mcpData.restaurants.length > 0) {
-          setRestaurants(mcpData.restaurants)
-        } else {
-          // Filtrar restaurantes que tengan platos recomendados
-          const dishRestaurantIds = new Set(mcpData.dishes?.map((dish: any) => dish.restaurant._id) || [])
-          const filteredRestaurants = allRestaurants.filter(restaurant => 
-            dishRestaurantIds.has(restaurant._id)
-          )
-          setRestaurants(filteredRestaurants.length > 0 ? filteredRestaurants : allRestaurants)
-        }
-        
-        return
-      }
-
-      // Fallback al modo demo
-      console.log('MCP falló, usando modo demo')
-      setIsMCPMode(false)
-      
+      // Usar la API de parse que ya adaptamos para mascotas
       const response = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,265 +101,297 @@ export default function Home() {
 
       if (response.ok) {
         const data = await response.json()
-        setSummary(`🧪 Modo Demo - ${data.summary || `Resultados para: "${query}"`}`)
         
-        // Filtrar restaurantes basado en platos encontrados
-        const dishRestaurantIds = new Set(data.dishes?.map((dish: any) => dish.restaurant._id) || [])
-        const filteredRestaurants = allRestaurants.filter(restaurant => 
-          dishRestaurantIds.has(restaurant._id)
-        )
-        setRestaurants(filteredRestaurants.length > 0 ? filteredRestaurants : allRestaurants)
+        setSummary(data.summary || `Resultados para: "${query}"`)
+        setPetVoiceResponse(data.petVoiceResponse)
+        
+        // Si hay recomendaciones específicas, mostrarlas
+        if (data.recommendations && data.recommendations.length > 0) {
+          setRecommendations(data.recommendations)
+          setSearchMode('recommendations')
+          
+          // Filtrar perfiles que tengan esas recomendaciones
+          const recBreeds = new Set(data.recommendations.map((rec: any) => rec.breed))
+          const filteredProfiles = allPetProfiles.filter(profile => 
+            recBreeds.has(profile.breed)
+          )
+          setPetProfiles(filteredProfiles.length > 0 ? filteredProfiles : allPetProfiles)
+        } else {
+          // Si no hay recomendaciones específicas, mostrar perfiles relevantes
+          setSearchMode('profiles')
+          setPetProfiles(allPetProfiles)
+        }
+        
+      } else {
+        setSummary('Error en la búsqueda. Mostrando todos los perfiles.')
+        setPetProfiles(allPetProfiles)
       }
     } catch (error) {
       console.error('Error en búsqueda:', error)
-      setSummary('Error en la búsqueda. Mostrando todos los restaurantes.')
-      setRestaurants(allRestaurants)
-      setIsMCPMode(false)
+      setSummary('Error en la búsqueda. Mostrando todos los perfiles.')
+      setPetProfiles(allPetProfiles)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleAddToCart = (item: CartItem) => {
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(i => i.id === item.id && i.restaurantId === item.restaurantId)
-      
-      if (existingItem) {
-        return prevItems.map(i => 
-          i.id === item.id && i.restaurantId === item.restaurantId
-            ? { ...i, quantity: i.quantity + 1 }
-            : i
-        )
+  const handleSelectRecommendation = (recommendation: Recommendation) => {
+    setSelectedRecommendations(prev => {
+      const exists = prev.find(r => r._id === recommendation._id)
+      if (exists) {
+        return prev.filter(r => r._id !== recommendation._id)
       } else {
-        return [...prevItems, item]
+        return [...prev, recommendation]
       }
     })
   }
 
-  const handleUpdateQuantity = (id: string, quantity: number) => {
-    if (quantity <= 0) {
-      setCartItems(prevItems => prevItems.filter(item => item.id !== id))
-    } else {
-      setCartItems(prevItems => 
-        prevItems.map(item => 
-          item.id === id ? { ...item, quantity } : item
-        )
-      )
-    }
+  const handleRemoveRecommendation = (id: string) => {
+    setSelectedRecommendations(prev => prev.filter(r => r._id !== id))
   }
 
-  const handleRemoveItem = (id: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id))
-  }
-
-  const handleClearCart = () => {
-    setCartItems([])
-  }
-
-  const handleAddMenuToCart = (dishes: any[]) => {
-    dishes.forEach(dish => {
-      handleAddToCart({
-        id: dish._id,
-        name: dish.name,
-        price: dish.price,
-        quantity: 1,
-        type: 'dish',
-        restaurantId: dish.restaurant._id,
-        restaurantName: dish.restaurant.name
-      })
-    })
+  const handleClearSelections = () => {
+    setSelectedRecommendations([])
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      searchDishes()
+      searchPetCare()
     }
   }
 
-  const totalCartItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const getTypeIcon = (type: string) => {
+    switch(type) {
+      case 'training': return '🎓'
+      case 'nutrition': return '🥩'
+      case 'wellness': return '🧘'
+      default: return '💡'
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Navbar estilo Glovo */}
-      <NavbarComponent cartItemsCount={totalCartItems} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Navbar estilo Pawsitive */}
+      <NavbarComponent />
       
-      {/* Hero Section estilo Glovo - MÁS GRANDE Y CENTRADO */}
-      <section className="bg-gradient-to-r from-yellow-400 via-orange-400 to-orange-500 text-white min-h-[70vh] flex items-center justify-center">
-        <div className="container mx-auto px-4 py-16">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              Comida a domicilio y mucho más
-            </h1>
-            <p className="text-2xl md:text-3xl mb-12 font-light max-w-3xl mx-auto">
-              Restaurantes, comida rápida, ¡lo que sea!
-            </p>
-            
-            {/* Barra de búsqueda principal estilo Glovo - CENTRADA */}
-            <div className="bg-white rounded-lg p-3 shadow-2xl max-w-3xl mx-auto">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 relative">
-                  <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Introduce tu dirección para saber qué hay cerca de ti"
-                    size="lg"
-                    classNames={{
-                      input: "text-gray-700 text-lg",
-                      inputWrapper: "bg-white border-0 shadow-none h-16"
-                    }}
-                    startContent={<span className="text-gray-400 text-xl">📍</span>}
-                  />
-                </div>
-                <Button 
-                  color="primary" 
-                  size="lg"
-                  onPress={searchDishes}
-                  isDisabled={isLoading}
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold h-16 px-10 text-lg"
-                >
-                  {isLoading ? <Spinner size="sm" /> : 'Buscar'}
-                </Button>
-              </div>
-              
-              {/* Enlaces de ejemplo - CENTRADOS */}
-              <div className="mt-6 flex flex-wrap gap-3 justify-center">
-                <Button 
-                  size="sm" 
-                  variant="light" 
-                  className="text-gray-600 text-sm h-10 px-4 hover:bg-gray-100 rounded-full" 
-                  onPress={() => setQuery("somos 4 y queremos pizza")}
-                >
-                  Pizza para 4 personas
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="light" 
-                  className="text-gray-600 text-sm h-10 px-4 hover:bg-gray-100 rounded-full" 
-                  onPress={() => setQuery("comida vegana para 2")}
-                >
-                  Comida vegana
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="light" 
-                  className="text-gray-600 text-sm h-10 px-4 hover:bg-gray-100 rounded-full" 
-                  onPress={() => setQuery("algo barato y rápido")}
-                >
-                  Rápido y barato
-                </Button>
-              </div>
+      <div className="container mx-auto px-4 py-8">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="inline-block p-3 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-4">
+            <span className="text-4xl">🐾</span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+            ¡Hola! Soy <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Pawsitive</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Cuéntame qué necesita tu mascota y te ayudo con recomendaciones personalizadas de entrenamiento, nutrición y bienestar
+          </p>
+
+          {/* Barra de búsqueda principal */}
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="flex gap-3">
+              <Input
+                size="lg"
+                placeholder="Ej: Mi golden retriever no deja de ladrar cuando llegan visitas..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyPress={handleKeyPress}
+                startContent={<span className="text-2xl">🐾</span>}
+                className="flex-1"
+                classNames={{
+                  input: "text-lg",
+                  inputWrapper: "h-14 bg-white shadow-lg border-2 border-blue-100 hover:border-blue-200 focus-within:border-blue-400"
+                }}
+              />
+              <Button
+                size="lg"
+                onClick={searchPetCare}
+                isLoading={isLoading}
+                className="h-14 px-8 bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+              >
+                {isLoading ? <Spinner size="sm" color="white" /> : '🔍 Buscar'}
+              </Button>
             </div>
+          </div>
+
+          {/* Ejemplos de consultas */}
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {[
+              "Mi perro ladra mucho 🐕",
+              "Dieta para gato senior 🐱",
+              "Ejercicio para Border Collie 🏃",
+              "Entrenamiento básico 🎓"
+            ].map((example, index) => (
+              <Button
+                key={index}
+                size="sm"
+                variant="flat"
+                onClick={() => setQuery(example.replace(/ [🐕🐱🏃🎓]/, ''))}
+                className="text-sm bg-white/70 hover:bg-white border border-gray-200 hover:border-blue-300 transition-colors"
+              >
+                {example}
+              </Button>
+            ))}
           </div>
         </div>
-      </section>
 
-      {/* Marcas populares estilo Glovo */}
-      {!isLoading && restaurants.length > 0 && (
-        <section className="py-8 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-2xl font-semibold mb-6 text-gray-800">Los mejores restaurantes</h2>
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {restaurants.slice(0, 8).map((restaurant) => (
-                <div key={restaurant._id} className="flex-none">
-                  <div className="w-20 h-20 bg-white rounded-lg shadow-sm flex items-center justify-center">
-                    <span className="text-2xl">🍽️</span>
-                  </div>
-                  <p className="text-xs text-center mt-2 w-20 truncate">{restaurant.name}</p>
-                </div>
-              ))}
-            </div>
+        {/* Respuesta de voz de la mascota */}
+        {petVoiceResponse && petVoiceResponse.hasRegisteredPet && (
+          <div className="max-w-4xl mx-auto mb-8">
+            <PetVoiceChat petVoiceResponse={petVoiceResponse} />
           </div>
-        </section>
-      )}
+        )}
 
-      <div className="container mx-auto px-4 py-8">
-        {/* Estado de búsqueda */}
-        {(summary || isLoading) && (
-          <div className="mb-6">
-            <Card className="border-0 shadow-sm">
-              <CardBody className="py-4">
-                <div className="flex items-center gap-3">
-                  {isMCPMode ? (
-                    <Badge color="success" variant="flat" className="bg-green-100 text-green-700">
-                      🤖 IA Activada
-                    </Badge>
-                  ) : (
-                    <Badge color="warning" variant="flat" className="bg-yellow-100 text-yellow-700">
-                      🧪 Modo Demo
-                    </Badge>
-                  )}
-                  <span className="text-gray-700">
-                    {isLoading ? 'Buscando los mejores restaurantes cerca de ti...' : summary}
-                  </span>
+        {/* Resumen de resultados */}
+        {summary && (
+          <div className="max-w-4xl mx-auto mb-8">
+            <Card className="bg-white/80 backdrop-blur-sm border border-blue-100">
+              <CardBody className="p-4">
+                <p className="text-gray-700 font-medium">{summary}</p>
+              </CardBody>
+            </Card>
+          </div>
+        )}
+
+        {/* Recomendaciones seleccionadas */}
+        {selectedRecommendations.length > 0 && (
+          <div className="max-w-6xl mx-auto mb-8">
+            <Card className="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200">
+              <CardBody className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                    <span>📋</span>
+                    Plan seleccionado ({selectedRecommendations.length})
+                  </h3>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    onClick={handleClearSelections}
+                    className="text-red-600 hover:bg-red-50"
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {selectedRecommendations.map((rec) => (
+                    <div key={rec._id} className="flex items-center gap-2 bg-white rounded-lg p-2 border">
+                      <span>{getTypeIcon(rec.type)}</span>
+                      <span className="text-sm font-medium text-gray-700">{rec.title}</span>
+                      <Button
+                        size="sm"
+                        isIconOnly
+                        variant="light"
+                        onClick={() => handleRemoveRecommendation(rec._id)}
+                        className="text-gray-400 hover:text-red-500 w-5 h-5"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </CardBody>
             </Card>
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Área principal */}
-          <div className="flex-1">
-            {/* Menú dinámico generado por IA */}
-            {dynamicMenu.length > 0 && groupSuggestion && (
-              <div className="mb-8">
-                <DynamicMenuCard
-                  dishes={dynamicMenu}
-                  groupSuggestion={groupSuggestion}
-                  onAddAllToCart={() => handleAddMenuToCart(dynamicMenu)}
-                />
-              </div>
-            )}
-
-            {/* Lista de restaurantes estilo Glovo */}
-            {isLoading ? (
-              <div className="text-center py-16">
-                <Spinner size="lg" className="text-yellow-500" />
-                <p className="mt-4 text-gray-600">Analizando tu solicitud...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {restaurants.length === 0 ? (
-                  <Card className="border-0 shadow-sm">
-                    <CardBody className="text-center py-16">
-                      <div className="text-6xl mb-4">🔍</div>
-                      <h3 className="text-xl font-semibold mb-2 text-gray-800">No encontramos restaurantes</h3>
-                      <p className="text-gray-600 mb-6">
-                        Intenta con una búsqueda diferente o explora todos los restaurantes disponibles.
-                      </p>
-                      <Button 
-                        color="primary" 
-                        className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold"
-                        onPress={loadAllRestaurants}
-                      >
-                        Ver todos los restaurantes
-                      </Button>
-                    </CardBody>
-                  </Card>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-semibold text-gray-800">
-                        {restaurants.length} restaurantes disponibles
-                      </h2>
-                    </div>
-                    {restaurants.map((restaurant) => (
-                      <RestaurantCard
-                        key={restaurant._id}
-                        restaurant={restaurant}
-                        onAddToCart={handleAddToCart}
-                      />
-                    ))}
-                  </>
-                )}
-              </div>
-            )}
+        {/* Toggle entre modos de vista */}
+        {(recommendations.length > 0 || petProfiles.length > 0) && (
+          <div className="max-w-6xl mx-auto mb-6">
+            <div className="flex justify-center gap-2">
+              <Button
+                size="sm"
+                variant={searchMode === 'recommendations' ? 'solid' : 'flat'}
+                onClick={() => setSearchMode('recommendations')}
+                disabled={recommendations.length === 0}
+                className={searchMode === 'recommendations' ? 'bg-blue-500 text-white' : ''}
+              >
+                🎯 Recomendaciones ({recommendations.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={searchMode === 'profiles' ? 'solid' : 'flat'}
+                onClick={() => setSearchMode('profiles')}
+                className={searchMode === 'profiles' ? 'bg-purple-500 text-white' : ''}
+              >
+                🐾 Perfiles de razas ({petProfiles.length})
+              </Button>
+            </div>
           </div>
+        )}
+
+        {/* Grid de contenido principal */}
+        <div className="max-w-6xl mx-auto">
+          {searchMode === 'recommendations' && recommendations.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendations.map((recommendation) => (
+                <RecommendationCard
+                  key={recommendation._id}
+                  recommendation={recommendation}
+                  onSelect={handleSelectRecommendation}
+                />
+              ))}
+            </div>
+          )}
+
+          {searchMode === 'profiles' && petProfiles.length > 0 && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {petProfiles.map((petProfile) => (
+                <PetCard
+                  key={petProfile._id}
+                  petProfile={petProfile}
+                  onSelectRecommendation={handleSelectRecommendation}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Estado vacío */}
+          {!isLoading && recommendations.length === 0 && petProfiles.length === 0 && query && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🐾</div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                No encontré recomendaciones específicas
+              </h3>
+              <p className="text-gray-500 mb-4">
+                Prueba con consultas como "mi perro ladra mucho" o "dieta para gato senior"
+              </p>
+              <Button
+                onClick={() => {
+                  setQuery('')
+                  setPetProfiles(allPetProfiles)
+                  setSearchMode('profiles')
+                }}
+                className="bg-blue-500 text-white"
+              >
+                Ver todos los perfiles
+              </Button>
+            </div>
+          )}
+
+          {/* Estado inicial */}
+          {!query && allPetProfiles.length > 0 && (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">🏠</div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                ¿Cómo puedo ayudarte hoy?
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Cuéntame qué necesita tu mascota y te daré recomendaciones personalizadas
+              </p>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {allPetProfiles.slice(0, 4).map((petProfile) => (
+                  <PetCard
+                    key={petProfile._id}
+                    petProfile={petProfile}
+                    onSelectRecommendation={handleSelectRecommendation}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      
-      {/* Footer */}
+
       <Footer />
     </div>
   )

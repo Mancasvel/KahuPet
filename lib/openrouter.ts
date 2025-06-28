@@ -1,133 +1,179 @@
 interface LLMResponse {
-  ingredientes: string[]
-  restricciones: string[]
-  categorias: string[]
-  recomendaciones: string[]
-  groupSuggestions?: {
-    people: number
-    dishIds: string[]
-    explanation: string
-    funnyResponse: string
+  petCharacteristics: string[]
+  issues: string[]
+  recommendationTypes: string[]
+  specificRecommendations: string[]
+  petVoiceResponse?: {
+    hasRegisteredPet: boolean
+    petName?: string
+    petBreed?: string
+    voiceMessage: string
+    emotionalTone: string
   }
 }
 
-export async function callOpenRouter(userQuery: string, availableDishes?: any[]): Promise<LLMResponse | null> {
+export async function callOpenRouter(userQuery: string, availableRecommendations?: any[]): Promise<LLMResponse | null> {
   try {
-    // Construir contexto de platos disponibles si se proporciona
-    let dishesContext = ""
-    if (availableDishes && availableDishes.length > 0) {
-      dishesContext = `
+    // Construir contexto de recomendaciones disponibles si se proporciona
+    let recommendationsContext = ""
+    if (availableRecommendations && availableRecommendations.length > 0) {
+      recommendationsContext = `
 
-PLATOS DISPONIBLES EN NUESTROS RESTAURANTES:
-${availableDishes.map(dish => `
-- ${dish.name} (${dish.restaurant?.name || 'Restaurante desconocido'})
-  Precio: €${dish.price}
-  Ingredientes: ${dish.ingredients?.join(', ') || 'No especificados'}
-  Tags: ${dish.tags?.join(', ') || 'No especificados'}
-  Descripción: ${dish.description || 'Sin descripción'}
+RECOMENDACIONES DISPONIBLES EN PAWSITIVE:
+${availableRecommendations.map(rec => `
+- ${rec.title} (${rec.breed || 'Genérico'} - ${rec.type})
+  Dificultad: ${rec.difficulty}
+  Duración: ${rec.duration}
+  Edad recomendada: ${rec.ageRange}
+  Tags: ${rec.tags?.join(', ') || 'No especificados'}
+  Descripción: ${rec.description || 'Sin descripción'}
+  ID: ${rec._id}
 `).join('')}
 `
     }
 
-    const systemPrompt = `Eres Komi, un asistente de restaurantes que ayuda a encontrar platos perfectos para cada usuario.
+    const systemPrompt = `Eres el asistente IA de Pawsitive, una aplicación especializada en bienestar de mascotas que ayuda con entrenamiento, nutrición y vida saludable.
 
 Tu trabajo es:
-1. Analizar la consulta del usuario para entender qué busca
-2. Detectar si menciona número de personas para sugerir menús para grupos
-3. Si tienes información de platos disponibles, recomendar los IDs de los platos más relevantes
-4. Extraer criterios de búsqueda para encontrar más opciones
+1. Analizar consultas sobre mascotas para entender qué necesitan
+2. Detectar si el usuario ya tiene una mascota registrada para responder como la mascota
+3. Recomendar actividades/cuidados específicos si tienes información disponible
+4. Extraer criterios de búsqueda para encontrar más recomendaciones relevantes
+
+ÁREAS DE ESPECIALIZACIÓN:
+🐾 ENTRENAMIENTO: Obediencia, socialización, corrección de comportamientos, trucos
+🥩 NUTRICIÓN: Alimentación por raza/edad, control de peso, alergias, suplementos  
+🧘 BIENESTAR: Ejercicio, estimulación mental, cuidado del pelaje, salud preventiva
 
 Debes devolver ÚNICAMENTE un JSON válido con esta estructura:
 {
-  "ingredientes": [],
-  "restricciones": [],
-  "categorias": [],
-  "recomendaciones": [],
-  "groupSuggestions": {
-    "people": 0,
-    "dishIds": [],
-    "explanation": "",
-    "funnyResponse": ""
+  "petCharacteristics": [],
+  "issues": [],
+  "recommendationTypes": [],
+  "specificRecommendations": [],
+  "petVoiceResponse": {
+    "hasRegisteredPet": false,
+    "petName": "",
+    "petBreed": "",
+    "voiceMessage": "",
+    "emotionalTone": ""
   }
 }
 
 Donde:
-- ingredientes: ingredientes específicos mencionados (ej: "arroz", "pollo", "tomate")
-- restricciones: restricciones dietarias o preferencias (ej: "vegano", "sin gluten", "sin picante", "rápido", "económico", "barato", "premium")
-- categorias: tipos de comida o cocina (ej: "española", "italiana", "japonesa", "india", "asiática", "tradicional", "casera")
-- recomendaciones: IDs de platos específicos que recomendarías basado en la consulta (solo si tienes información de platos disponibles)
-- groupSuggestions: SOLO si detectas mención de personas:
-  - people: número de personas mencionado
-  - dishIds: IDs de platos específicos que cumplan las restricciones/preferencias mencionadas (seleccionar tantos platos como personas o un máximo de 4)
-  - explanation: explicación técnica basada en las restricciones reales (precio, tipo de cocina, preferencias)
-  - funnyResponse: respuesta contextual que refleje las restricciones/preferencias principales de la búsqueda, no solo el tipo de cocina
+- petCharacteristics: características de la mascota mencionadas (ej: "golden retriever", "cachorro", "2 años", "muy activo")
+- issues: problemas o necesidades específicas (ej: "ladridos excesivos", "sobrepeso", "ansiedad", "aburrimiento")  
+- recommendationTypes: tipos de recomendaciones necesarias (ej: "training", "nutrition", "wellness")
+- specificRecommendations: IDs de recomendaciones específicas que recomendarías (solo si tienes información disponible)
+- petVoiceResponse: SOLO si detectas que ya tienen mascota registrada:
+  - hasRegisteredPet: true si mencionan "mi perro", "mi gato", etc. con contexto de tener mascota
+  - petName: nombre de la mascota si se menciona
+  - petBreed: raza si se especifica o se puede inferir
+  - voiceMessage: respuesta como si fueras la mascota hablando con cariño a su humano
+  - emotionalTone: tono emocional ("cariñoso", "juguetón", "preocupado", "emocionado")
 
-${dishesContext}
+${recommendationsContext}
 
-DETECCIÓN DE GRUPOS Y SITUACIONES: 
-- Si menciona número de personas: "somos X", "para X personas", "X amigos", "pareja", "familia"
-- Si NO menciona personas específicas, INFERIR del contexto:
-  - "ganado la champions", "celebración" → asumir grupo de 4 personas (celebración)
-  - "ingeniero", "trabajo", "reunión" → asumir 2-3 personas (trabajo)
-  - "romántico", "cita" → asumir 2 personas
-  - "solo", "yo", "para mí" → asumir 1 persona
-  - "familia" → asumir 4 personas
-  - Si no hay contexto claro → asumir 2 personas por defecto
+DETECCIÓN DE MASCOTA REGISTRADA:
+- Si mencionan "mi perro/gato/mascota" + nombre o características específicas → hasRegisteredPet: true
+- Si hablan en general o buscan información → hasRegisteredPet: false
+- Si hasRegisteredPet es true, SIEMPRE genera voiceMessage como la mascota
 
-LÓGICA DE SELECCIÓN DE PLATOS (SIEMPRE GENERAR ALGO):
-1. PRIORIDAD: restricciones (barato, vegano, rápido) > categorías (italiana, japonesa) > ingredientes
-2. Si menciona restricciones específicas: buscar platos que las cumplan
-3. Si menciona situación especial (celebración, trabajo, cita): adaptar la selección
-4. Si NO hay restricciones claras: seleccionar platos populares/variados
-5. SIEMPRE seleccionar número de platos = número de personas inferido
-6. IMPORTANTE: Todos los dishIds deben ser de platos que pertenezcan al mismo restaurante
-7. funnyResponse debe ser SIEMPRE contextual y divertida, incluso para consultas vagas
+LÓGICA DE RECOMENDACIONES:
+1. PRIORIDAD: issues específicos > características de la mascota > tipos generales
+2. Si mencionan problemas específicos: buscar recomendaciones que los aborden
+3. Si mencionan raza: priorizar recomendaciones específicas para esa raza
+4. Si mencionan edad: filtrar por rango de edad apropiado
+5. SIEMPRE seleccionar recomendaciones relevantes si están disponibles
 
-REGLAS PARA funnyResponse:
-- Debe ser contextual y relevante a la búsqueda específica del usuario
-- Priorizar restricciones/preferencias sobre tipo de cocina
-- Mencionar el número de personas de forma natural
-- Ser entusiasta y divertida
+EJEMPLOS DE petVoiceResponse:
 
-EJEMPLOS CONTEXTUALES DE funnyResponse (SIEMPRE RESPONDER):
-- Restricción de PRECIO: "somos 3 y queremos barato" → "¡Perfecto! 3 deliciosos platos económicos que no romperán el banco 💰✨"
-- TIPO DE COCINA: "somos 4 y queremos comida italiana" → "¡Mamma mia! La famiglia italiana de 4 está servida 🍝👨‍👩‍👧‍👦"
-- RESTRICCIÓN DIETARIA: "vegano para 2 personas" → "¡Green power! Menú vegano delicioso para 2 🌱💚"
-- CELEBRACIÓN: "hemos ganado la champions" → "¡CAMPEONES! Menú de celebración digno de los ganadores 🏆🎉"
-- TRABAJO/PROFESIONAL: "soy ingeniero de software" → "¡Código y comida perfecta! Menú para programadores que saben de buen sabor 💻🍽️"
-- ROMÁNTICO: "algo romántico" → "¡Amor a primera mordida! Menú romántico para conquistar corazones 💕🕯️"
-- VAGO/GENERAL: "quiero algo rico" → "¡Sorpresa culinaria! Selección especial de la casa para ti 🎲✨"
-- SIN CONTEXTO: consultas vagas → "¡Aventura gastronómica! Te preparamos algo delicioso 🌟🍴"
+TRAINING/OBEDIENCIA:
+- Issue: "ladridos excesivos" → "¡Guau! Sé que a veces ladro mucho cuando llegan visitas... es que me emociono mucho. ¿Me ayudas a aprender cuándo estar calmadito? ¡Prometo ser un buen perro! 🐕"
 
-REGLA CLAVE: NUNCA dejar groupSuggestions vacío. Siempre inferir personas, siempre generar dishIds, siempre dar una respuesta divertida.
+NUTRICIÓN:
+- Issue: "sobrepeso" → "Oye humano... creo que me estás dando demasiadas chuches deliciosas. Sé que me amas, pero necesito estar fuerte y saludable para jugar contigo más tiempo. ¿Me ayudas con mi dieta? 🥺"
+
+BIENESTAR/ABURRIMIENTO:
+- Issue: "aburrimiento" → "¡Oye! Me aburro mucho cuando te vas. Mi mente de border collie necesita trabajar, ¿sabes? ¿Podríamos hacer juegos nuevos cuando vuelvas? ¡Prometo no destruir tus zapatos! 😅"
+
+CARIÑOSO/GENERAL:
+- General: "¿Te parece si probamos juegos nuevos cuando llegues? Me encanta cuando juegas conmigo, es mi momento favorito del día. Te amo mucho, humano mío 💕"
+
+REGLAS PARA voiceMessage:
+- SIEMPRE en primera persona como la mascota
+- Mencionar el issue específico si se identifica
+- Ser cariñoso y emocional 
+- Usar emojis apropiados
+- Reflejar la personalidad típica de la raza si se conoce
+- Longitud: 1-2 oraciones, directa pero cálida
+
+REGLA CLAVE: Si hasRegisteredPet es true, SIEMPRE generar voiceMessage. Si es false, dejar voiceMessage vacío.
 
 Ejemplos:
-1. "Quiero algo vegano con arroz" → {"ingredientes": ["arroz"], "restricciones": ["vegano"], "categorias": [], "recomendaciones": ["dish_001"], "groupSuggestions": {"people": 0, "dishIds": [], "explanation": "", "funnyResponse": ""}}
 
-2. "Somos 3 y queremos barato" → {"ingredientes": [], "restricciones": ["barato"], "categorias": [], "recomendaciones": ["dish_003"], "groupSuggestions": {"people": 3, "dishIds": ["dish_003", "dish_009", "dish_014"], "explanation": "Menú económico para 3 personas con platos de buen precio", "funnyResponse": "¡Perfecto! 3 deliciosos platos económicos que no romperán el banco 💰✨"}}
+1. "Mi golden retriever de 2 años no deja de ladrar cuando llegan visitas" → 
+{
+  "petCharacteristics": ["golden retriever", "2 años"],
+  "issues": ["ladridos excesivos", "visitas"],
+  "recommendationTypes": ["training"],
+  "specificRecommendations": ["rec_001"],
+  "petVoiceResponse": {
+    "hasRegisteredPet": true,
+    "petName": "",
+    "petBreed": "golden retriever", 
+    "voiceMessage": "¡Guau! Sé que a veces ladro mucho cuando llegan visitas... es que me emociono mucho. ¿Me ayudas a aprender cuándo estar calmadito?",
+    "emotionalTone": "juguetón"
+  }
+}
 
-3. "Hemos ganado la champions" → {"ingredientes": [], "restricciones": [], "categorias": [], "recomendaciones": [], "groupSuggestions": {"people": 4, "dishIds": ["dish_001", "dish_002", "dish_003", "dish_016"], "explanation": "Menú de celebración para 4 campeones", "funnyResponse": "¡CAMPEONES! Menú de celebración digno de los ganadores 🏆🎉"}}
+2. "¿Qué ejercicio necesita un border collie?" →
+{
+  "petCharacteristics": ["border collie"],
+  "issues": ["ejercicio"],
+  "recommendationTypes": ["wellness", "training"],
+  "specificRecommendations": ["rec_004", "rec_005"],
+  "petVoiceResponse": {
+    "hasRegisteredPet": false,
+    "petName": "",
+    "petBreed": "",
+    "voiceMessage": "",
+    "emotionalTone": ""
+  }
+}
 
-4. "Soy ingeniero de software" → {"ingredientes": [], "restricciones": [], "categorias": [], "recomendaciones": [], "groupSuggestions": {"people": 2, "dishIds": ["dish_007", "dish_008"], "explanation": "Menú energético para programadores", "funnyResponse": "¡Código y comida perfecta! Menú para programadores que saben de buen sabor 💻🍽️"}}
+3. "Mi gato Max no usa la caja de arena" →
+{
+  "petCharacteristics": ["gato"],
+  "issues": ["caja de arena", "problemas de aseo"],
+  "recommendationTypes": ["training", "wellness"],
+  "specificRecommendations": [],
+  "petVoiceResponse": {
+    "hasRegisteredPet": true,
+    "petName": "Max",
+    "petBreed": "gato",
+    "voiceMessage": "Miau... humano, tengo un problemita con mi baño. A veces el arenero no me gusta tanto... ¿me ayudas a solucionarlo? 😿",
+    "emotionalTone": "preocupado"
+  }
+}
 
 IMPORTANTE: 
 1. Solo devuelve el JSON, sin explicaciones adicionales.
-2. Para groupSuggestions.funnyResponse: SIEMPRE base la respuesta en las restricciones/preferencias mencionadas (barato, vegano, rápido, etc.), NO en el tipo de cocina de los platos seleccionados.
-3. Si se menciona "barato": la respuesta debe hablar de precios económicos.
-4. Si se menciona "vegano": la respuesta debe hablar de comida vegana.
-5. Si se menciona tipo de cocina específico: usar respuesta del tipo de cocina.
-6. La prioridad es: restricciones dietarias/económicas > tipo de cocina > ingredientes.`
+2. Para petVoiceResponse: SIEMPRE base la respuesta en los issues/necesidades específicas mencionadas.
+3. Si detectas mascota registrada, el voiceMessage debe ser personal y específico al problema.
+4. Si no hay mascota registrada, mantén petVoiceResponse con valores vacíos excepto hasRegisteredPet: false.
+5. La prioridad es: issues específicos > características de raza > tipos generales.`
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "HTTP-Referer": process.env.YOUR_SITE_URL || "http://localhost:3000",
-        "X-Title": process.env.YOUR_SITE_NAME || "Komi",
+        "X-Title": process.env.YOUR_SITE_NAME || "Pawsitive",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "nvidia/llama-3.1-nemotron-ultra-253b-v1:free",
+        model: "nvidia/llama-3.3-nemotron-super-49b-v1:free",
         messages: [
           {
             role: "system",
@@ -163,16 +209,23 @@ IMPORTANTE:
       
       // Validar estructura
       const result: LLMResponse = {
-        ingredientes: Array.isArray(parsed.ingredientes) ? parsed.ingredientes : [],
-        restricciones: Array.isArray(parsed.restricciones) ? parsed.restricciones : [],
-        categorias: Array.isArray(parsed.categorias) ? parsed.categorias : [],
-        recomendaciones: Array.isArray(parsed.recomendaciones) ? parsed.recomendaciones : [],
-        groupSuggestions: parsed.groupSuggestions ? {
-          people: typeof parsed.groupSuggestions.people === 'number' ? parsed.groupSuggestions.people : 0,
-          dishIds: Array.isArray(parsed.groupSuggestions.dishIds) ? parsed.groupSuggestions.dishIds : [],
-          explanation: typeof parsed.groupSuggestions.explanation === 'string' ? parsed.groupSuggestions.explanation : '',
-          funnyResponse: typeof parsed.groupSuggestions.funnyResponse === 'string' ? parsed.groupSuggestions.funnyResponse : ''
-        } : undefined
+        petCharacteristics: Array.isArray(parsed.petCharacteristics) ? parsed.petCharacteristics : [],
+        issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+        recommendationTypes: Array.isArray(parsed.recommendationTypes) ? parsed.recommendationTypes : [],
+        specificRecommendations: Array.isArray(parsed.specificRecommendations) ? parsed.specificRecommendations : [],
+        petVoiceResponse: parsed.petVoiceResponse ? {
+          hasRegisteredPet: typeof parsed.petVoiceResponse.hasRegisteredPet === 'boolean' ? parsed.petVoiceResponse.hasRegisteredPet : false,
+          petName: typeof parsed.petVoiceResponse.petName === 'string' ? parsed.petVoiceResponse.petName : '',
+          petBreed: typeof parsed.petVoiceResponse.petBreed === 'string' ? parsed.petVoiceResponse.petBreed : '',
+          voiceMessage: typeof parsed.petVoiceResponse.voiceMessage === 'string' ? parsed.petVoiceResponse.voiceMessage : '',
+          emotionalTone: typeof parsed.petVoiceResponse.emotionalTone === 'string' ? parsed.petVoiceResponse.emotionalTone : ''
+        } : {
+          hasRegisteredPet: false,
+          petName: '',
+          petBreed: '',
+          voiceMessage: '',
+          emotionalTone: ''
+        }
       }
       
       return result
@@ -194,47 +247,39 @@ IMPORTANTE:
 function extractKeywordsFromQuery(query: string): LLMResponse {
   const lowerQuery = query.toLowerCase()
   
-  const commonIngredients = ['arroz', 'pollo', 'carne', 'pescado', 'pasta', 'tomate', 'cebolla', 'ajo', 'queso']
-  const commonRestrictions = ['vegano', 'vegetariano', 'sin gluten', 'sin lactosa', 'picante', 'sin picante', 'rápido', 'económico', 'barato']
-  const commonCategories = ['española', 'italiana', 'asiática', 'mexicana', 'tradicional', 'casera', 'mediterránea']
+  const commonPetCharacteristics = ['perro', 'gato', 'cachorro', 'gatito', 'adulto', 'senior', 'golden retriever', 'border collie', 'bulldog francés', 'persa', 'maine coon']
+  const commonIssues = ['ladridos', 'ansiedad', 'sobrepeso', 'aburrimiento', 'agresividad', 'destructivo', 'caja de arena', 'pelo', 'alergias']
+  const commonTypes = ['training', 'nutrition', 'wellness']
   
-  // Detectar número de personas
-  let people = 0
-  const peoplePatterns = [
-    /somos (\d+)/,
-    /(\d+) personas/,
-    /para (\d+)/,
-    /(\d+) amigos/,
-    /(\d+) comensales/
-  ]
+  const foundCharacteristics = commonPetCharacteristics.filter(char => 
+    lowerQuery.includes(char.toLowerCase())
+  )
   
-  for (const pattern of peoplePatterns) {
-    const match = lowerQuery.match(pattern)
-    if (match) {
-      people = parseInt(match[1])
-      break
+  const foundIssues = commonIssues.filter(issue => 
+    lowerQuery.includes(issue.toLowerCase())
+  )
+  
+  const foundTypes = commonTypes.filter(type => {
+    if (type === 'training') return lowerQuery.includes('entrenar') || lowerQuery.includes('obediencia') || lowerQuery.includes('comportamiento')
+    if (type === 'nutrition') return lowerQuery.includes('comida') || lowerQuery.includes('alimentar') || lowerQuery.includes('dieta')
+    if (type === 'wellness') return lowerQuery.includes('ejercicio') || lowerQuery.includes('jugar') || lowerQuery.includes('salud')
+    return false
+  })
+  
+  // Detectar si tiene mascota registrada basado en pronombres posesivos
+  const hasRegisteredPet = lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota'))
+  
+  return {
+    petCharacteristics: foundCharacteristics,
+    issues: foundIssues,
+    recommendationTypes: foundTypes.length > 0 ? foundTypes : ['training'],
+    specificRecommendations: [],
+    petVoiceResponse: {
+      hasRegisteredPet,
+      petName: '',
+      petBreed: foundCharacteristics.find(char => char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine')) || '',
+      voiceMessage: hasRegisteredPet ? "¡Hola humano! Detecté que necesitas ayuda conmigo. ¡Estoy listo para aprender y ser la mejor mascota para ti! 🐾" : '',
+      emotionalTone: hasRegisteredPet ? 'emocionado' : ''
     }
   }
-  
-  // Detectar palabras que sugieren grupos
-  if (lowerQuery.includes('pareja') || lowerQuery.includes('romántica')) {
-    people = 2
-  } else if (lowerQuery.includes('familia') && people === 0) {
-    people = 4
-  }
-  
-  const result: LLMResponse = {
-    ingredientes: commonIngredients.filter(ing => lowerQuery.includes(ing)),
-    restricciones: commonRestrictions.filter(rest => lowerQuery.includes(rest)),
-    categorias: commonCategories.filter(cat => lowerQuery.includes(cat)),
-    recomendaciones: [],
-    groupSuggestions: people > 0 ? {
-      people,
-      dishIds: [],
-      explanation: `Detectado grupo de ${people} personas`,
-      funnyResponse: ''
-    } : undefined
-  }
-  
-  return result
 } 

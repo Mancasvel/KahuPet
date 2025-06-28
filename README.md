@@ -1,21 +1,42 @@
-# 🍜 Komi - Encuentra tu plato perfecto
+# 🐾 Pawsitive - Bienestar personalizado para tu mascota
 
-Komi es una aplicación web que permite a los usuarios describir en lenguaje natural lo que les apetece comer y recibe recomendaciones de platos reales disponibles en restaurantes registrados.
+Pawsitive es una aplicación web revolucionaria que permite a los dueños de mascotas describir en lenguaje natural las necesidades de sus compañeros peludos y recibir recomendaciones personalizadas de entrenamiento, nutrición y bienestar.
 
 ## ✨ Características
 
-- **Búsqueda en lenguaje natural**: Describe lo que quieres comer en tus propias palabras
-- **IA integrada**: Utiliza OpenRouter para extraer intenciones de las consultas
-- **Interfaz moderna**: Diseñada con HeroUI y Tailwind CSS
-- **Base de datos rica**: MongoDB con restaurantes y platos diversos
-- **Filtros inteligentes**: Por ingredientes, restricciones dietarias y categorías
+- **Comunicación en lenguaje natural**: Describe lo que necesita tu mascota en tus propias palabras
+- **IA integrada**: Utiliza OpenRouter para comprender las necesidades específicas de cada mascota
+- **Respuestas personalizadas**: Tras el registro, la app responde como si fuera tu propia mascota
+- **Interfaz moderna**: Diseñada con HeroUI y Tailwind CSS para una experiencia cálida y atractiva
+- **Base de datos especializada**: MongoDB con información específica para diferentes razas y necesidades
+- **Recomendaciones inteligentes**: Por raza, edad, personalidad y necesidades específicas
+
+## 🎯 Áreas de enfoque
+
+### 🐾 Entrenamiento y Educación
+- Técnicas de obediencia básica y avanzada
+- Corrección de comportamientos problemáticos
+- Socialización y adaptación
+- Entrenamiento específico por raza
+
+### 🥩 Nutrición Personalizada
+- Recomendaciones dietarias según raza y edad
+- Planes alimenticios para necesidades especiales
+- Control de peso y salud digestiva
+- Suplementos y vitaminas
+
+### 🧘 Vida Saludable
+- Rutinas de ejercicio adaptadas
+- Actividades de estimulación mental
+- Juegos interactivos y educativos
+- Cuidado preventivo de salud
 
 ## 🛠️ Tecnologías
 
 - **Frontend**: Next.js 14 + TypeScript
 - **Estilo**: Tailwind CSS + HeroUI
 - **Base de datos**: MongoDB Atlas
-- **IA**: OpenRouter (LLM gratuito)
+- **IA**: OpenRouter (LLM para comprensión de lenguaje natural)
 - **API**: Next.js API Routes
 
 ## 🚀 Instalación y configuración
@@ -32,12 +53,12 @@ Crea un archivo `.env.local` en la raíz del proyecto:
 
 ```bash
 # MongoDB Atlas
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/komi?retryWrites=true&w=majority
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/pawsitive?retryWrites=true&w=majority
 
 # OpenRouter API
 OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 YOUR_SITE_URL=http://localhost:3000
-YOUR_SITE_NAME=Komi
+YOUR_SITE_NAME=Pawsitive
 ```
 
 #### Obtener MongoDB URI:
@@ -52,15 +73,15 @@ YOUR_SITE_NAME=Komi
 
 ### 3. Poblar la base de datos
 
-Ejecuta el script de seeding para llenar MongoDB con datos de ejemplo:
+Ejecuta el script de seeding para llenar MongoDB con datos de ejemplo de mascotas:
 
 ```bash
 npm run seed
 ```
 
 Esto creará:
-- 4 restaurantes con diferentes tipos de cocina
-- 12 platos con variedad de ingredientes y etiquetas
+- Perfiles de diferentes razas de mascotas
+- Recomendaciones de entrenamiento, nutrición y actividades
 - Índices optimizados para búsquedas
 
 ### 4. Ejecutar la aplicación
@@ -71,43 +92,48 @@ npm run dev
 
 La aplicación estará disponible en [http://localhost:3000](http://localhost:3000)
 
-## 🍽️ Datos de ejemplo
+## 🐕 Ejemplos de consultas
 
-La aplicación incluye datos de ejemplo de 4 restaurantes:
+Prueba estas consultas para ver cómo funciona Pawsitive:
 
-1. **La Toscana** (Italiana) - Pasta vegana, risotto, pizza sin gluten
-2. **El Rincón Español** (Española) - Paella, gazpacho, tortilla picante
-3. **Sakura Sushi** (Japonesa) - Sushi vegano, ramen picante, teriyaki
-4. **Green Garden** (Saludable) - Bowls, ensaladas veganas, hamburguesas de lentejas
+### Entrenamiento:
+- "Mi golden retriever de 2 años no deja de ladrar cuando llegan visitas"
+- "¿Cómo enseño a mi cachorro a hacer sus necesidades fuera?"
+- "Mi gato no usa la caja de arena, ¿qué puedo hacer?"
 
-## 💡 Ejemplos de búsquedas
+### Nutrición:
+- "Mi perro senior necesita perder peso pero le encanta comer"
+- "¿Qué comida es mejor para un bulldog francés con alergias?"
+- "Mi gatito de 3 meses, ¿cuánto debe comer al día?"
 
-Prueba estas consultas para ver cómo funciona la aplicación:
-
-- "Quiero algo vegano con arroz, que sea rápido y sin picante"
-- "Comida tradicional española con carne"
-- "Plato sin gluten y económico"
-- "Algo picante con pollo para llevar"
-- "Comida italiana vegetariana"
+### Bienestar:
+- "Mi border collie se aburre mucho cuando no estoy"
+- "Actividades para estimular mentalmente a mi pastor alemán"
+- "Mi gato es muy sedentario, necesita más ejercicio"
 
 ## 🏗️ Estructura del proyecto
 
 ```
-komi/
+pawsitive/
 ├── app/
 │   ├── layout.tsx          # Layout principal con HeroUI
-│   ├── page.tsx            # Página principal con interfaz de chat
+│   ├── page.tsx            # Página principal con chat inteligente
 │   ├── providers.tsx       # Configuración de HeroUI
 │   ├── globals.css         # Estilos globales
 │   └── api/
+│       ├── pets/
+│       │   └── route.ts    # API para gestión de mascotas
+│       ├── recommendations/
+│       │   └── route.ts    # API para recomendaciones
 │       └── parse/
-│           └── route.ts    # API route para procesar consultas
+│           └── route.ts    # API para procesamiento de lenguaje natural
 ├── components/
-│   ├── DishCard.tsx        # Componente para mostrar platos
-│   └── SearchIcon.tsx      # Icono de búsqueda
+│   ├── PetCard.tsx         # Componente para mostrar información de mascotas
+│   ├── RecommendationCard.tsx # Componente para recomendaciones
+│   └── PetVoiceChat.tsx    # Componente para respuestas como mascota
 ├── lib/
-│   ├── openrouter.ts       # Comunicación con OpenRouter
-│   └── seed.ts             # Script de seeding
+│   ├── openrouter.ts       # Comunicación con OpenRouter (adaptado para mascotas)
+│   └── seed.ts             # Script de seeding con datos de mascotas
 ├── package.json
 ├── tsconfig.json
 ├── tailwind.config.ts
@@ -120,39 +146,42 @@ komi/
 - `npm run build` - Construir para producción
 - `npm run start` - Ejecutar build de producción
 - `npm run lint` - Ejecutar linter
-- `npm run seed` - Poblar base de datos
+- `npm run seed` - Poblar base de datos con datos de mascotas
 
 ## 🎨 Personalización
 
-### Agregar más restaurantes y platos
+### Agregar más razas y recomendaciones
 
 Edita el archivo `lib/seed.ts` para agregar más datos:
 
 ```typescript
-const sampleRestaurants = [
+const samplePets = [
   {
-    name: "Tu Restaurante",
-    address: "Tu Dirección",
-    dishes: [
+    breed: "Golden Retriever",
+    category: "Perro",
+    characteristics: {
+      size: "Grande",
+      energy: "Alta",
+      temperament: ["Amigable", "Inteligente", "Devoto"]
+    },
+    recommendations: [
       {
-        name: "Tu Plato",
-        description: "Descripción del plato",
-        ingredients: ["ingrediente1", "ingrediente2"],
-        tags: ["tag1", "tag2"],
-        price: 15.00,
-        image: "URL_de_imagen"
+        type: "training",
+        title: "Entrenamiento básico de obediencia",
+        description: "Perfecto para golden retrievers jóvenes",
+        tags: ["obediencia", "cachorro", "básico"]
       }
     ]
   }
 ]
 ```
 
-### Modificar el prompt de IA
+### Modificar la personalidad de las respuestas
 
-Edita `lib/openrouter.ts` para cambiar cómo la IA interpreta las consultas:
+Edita `lib/openrouter.ts` para cambiar cómo responde como mascota:
 
 ```typescript
-const systemPrompt = `Tu prompt personalizado...`
+const petVoicePrompt = `Responde como si fueras la mascota del usuario...`
 ```
 
 ## 🐛 Solución de problemas
@@ -167,21 +196,15 @@ const systemPrompt = `Tu prompt personalizado...`
 - Asegúrate de que tengas créditos en tu cuenta
 - Comprueba que el modelo esté disponible
 
-### Errores de dependencias
-```bash
-# Limpiar caché y reinstalar
-rm -rf node_modules package-lock.json
-npm install
-```
-
 ## 📝 Próximas características
 
-- [ ] Autenticación de usuarios
-- [ ] Favoritos y historial
-- [ ] Sistema de pedidos
-- [ ] Más filtros de búsqueda
-- [ ] Geolocalización
-- [ ] Reseñas y calificaciones
+- [ ] Registro y perfil de mascotas
+- [ ] Historial de consultas y progreso
+- [ ] Recordatorios de cuidados y actividades
+- [ ] Integración con veterinarios
+- [ ] Comunidad de dueños de mascotas
+- [ ] Fotos y videos de actividades
+- [ ] Seguimiento de salud y bienestar
 
 ## 🤝 Contribuir
 
@@ -195,13 +218,10 @@ npm install
 
 Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
 
-## 🙏 Agradecimientos
+## 💝 Con amor para nuestras mascotas
 
-- [HeroUI](https://heroui.dev) por los componentes de interfaz
-- [OpenRouter](https://openrouter.ai) por el acceso a modelos LLM
-- [MongoDB Atlas](https://cloud.mongodb.com) por la base de datos
-- [Unsplash](https://unsplash.com) por las imágenes de ejemplo
+Pawsitive está dedicado a mejorar la vida de nuestros compañeros peludos, emplumados y escamosos. Porque ellos nos dan amor incondicional, merecen el mejor cuidado posible.
 
 ---
 
-¡Hecho con ❤️ para encontrar el plato perfecto! 
+*"La grandeza de una nación puede ser juzgada por la forma en que trata a sus animales."* - Mahatma Gandhi 

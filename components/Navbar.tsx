@@ -1,80 +1,141 @@
 'use client'
 
-import { Navbar, NavbarBrand, NavbarContent, NavbarItem, Button, Badge } from '@heroui/react'
+import { 
+  Navbar, 
+  NavbarBrand, 
+  NavbarContent, 
+  NavbarItem, 
+  Button,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Avatar
+} from '@heroui/react'
+import { useState } from 'react'
 
 interface NavbarComponentProps {
-  cartItemsCount: number
+  // Removido cartItemsCount ya que no hay carrito en Pawsitive
 }
 
-export function NavbarComponent({ cartItemsCount }: NavbarComponentProps) {
+export function NavbarComponent({}: NavbarComponentProps) {
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
   return (
     <Navbar 
-      maxWidth="full" 
-      className="bg-white border-b border-gray-200 shadow-sm"
-      height="72px"
+      isBordered 
+      className="bg-white/80 backdrop-blur-md border-blue-100"
+      classNames={{
+        wrapper: "max-w-7xl",
+        brand: "text-blue-600",
+        content: "text-gray-700"
+      }}
     >
-      <NavbarBrand>
-        <div className="flex items-center gap-2">
-          <div className="bg-yellow-400 rounded-lg p-2">
-            <span className="text-2xl font-bold text-black">K</span>
-          </div>
-          <span className="text-2xl font-bold text-gray-800">Komi</span>
+      {/* Logo y Nombre */}
+      <NavbarBrand className="flex items-center gap-2">
+        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+          <span className="text-white text-xl">🐾</span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Pawsitive
+          </span>
+          <span className="text-xs text-gray-500">Bienestar para mascotas</span>
         </div>
       </NavbarBrand>
 
-      <NavbarContent className="hidden sm:flex gap-8" justify="center">
+      {/* Contenido central - navegación */}
+      <NavbarContent className="hidden sm:flex gap-6" justify="center">
         <NavbarItem>
-          <Button 
-            variant="light" 
-            className="text-gray-700 font-medium hover:text-yellow-600"
+          <Button
+            variant="light"
+            className="text-gray-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            startContent={<span>🎓</span>}
           >
-            Restaurantes
+            Entrenamiento
           </Button>
         </NavbarItem>
         <NavbarItem>
-          <Button 
-            variant="light" 
-            className="text-gray-700 font-medium hover:text-yellow-600"
+          <Button
+            variant="light"
+            className="text-gray-600 hover:text-green-600 hover:bg-green-50 transition-colors"
+            startContent={<span>🥩</span>}
           >
-            Categorías
+            Nutrición
           </Button>
         </NavbarItem>
         <NavbarItem>
-          <Button 
-            variant="light" 
-            className="text-gray-700 font-medium hover:text-yellow-600"
+          <Button
+            variant="light"
+            className="text-gray-600 hover:text-purple-600 hover:bg-purple-50 transition-colors"
+            startContent={<span>🧘</span>}
           >
-            Ofertas
+            Bienestar
+          </Button>
+        </NavbarItem>
+        <NavbarItem>
+          <Button
+            variant="light"
+            className="text-gray-600 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+            startContent={<span>🏥</span>}
+          >
+            Veterinarios
           </Button>
         </NavbarItem>
       </NavbarContent>
 
+      {/* Contenido derecho */}
       <NavbarContent justify="end">
-        <NavbarItem>
-          <Button 
-            variant="light" 
-            className="text-gray-700 font-medium hover:text-yellow-600"
+        {/* Botón de registro de mascota */}
+        <NavbarItem className="hidden sm:flex">
+          <Button
+            className="bg-gradient-to-r from-blue-500 to-purple-500 text-white font-semibold shadow-md hover:shadow-lg transition-all"
+            startContent={<span>🐾</span>}
           >
-            Iniciar sesión
+            Registra tu mascota
           </Button>
         </NavbarItem>
+
+        {/* Dropdown de usuario */}
         <NavbarItem>
-          <div className="relative">
-            <Button 
-              className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold min-w-unit-20"
-            >
-              🛒 Carrito
-            </Button>
-            {cartItemsCount > 0 && (
-              <Badge 
-                color="danger" 
-                size="sm"
-                className="absolute -top-1 -right-1 bg-red-500 text-white"
-              >
-                {cartItemsCount}
-              </Badge>
-            )}
-          </div>
+          <Dropdown>
+            <DropdownTrigger>
+              <Button variant="light" className="p-2 min-w-0">
+                <Avatar
+                  size="sm"
+                  showFallback
+                  fallback={<span className="text-lg">👤</span>}
+                  classNames={{
+                    base: "bg-gradient-to-r from-blue-100 to-purple-100",
+                    fallback: "text-blue-600"
+                  }}
+                />
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu aria-label="User menu">
+              <DropdownItem key="profile" startContent={<span>👤</span>}>
+                Mi perfil
+              </DropdownItem>
+              <DropdownItem key="pets" startContent={<span>🐾</span>}>
+                Mis mascotas
+              </DropdownItem>
+              <DropdownItem key="plans" startContent={<span>📋</span>}>
+                Mis planes
+              </DropdownItem>
+              <DropdownItem key="history" startContent={<span>📖</span>}>
+                Historial
+              </DropdownItem>
+              <DropdownItem key="settings" startContent={<span>⚙️</span>}>
+                Configuración
+              </DropdownItem>
+              <DropdownItem key="help" startContent={<span>❓</span>}>
+                Ayuda
+              </DropdownItem>
+              <DropdownItem key="logout" className="text-danger" startContent={<span>🚪</span>}>
+                Cerrar sesión
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
         </NavbarItem>
       </NavbarContent>
     </Navbar>

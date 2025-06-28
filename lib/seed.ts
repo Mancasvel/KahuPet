@@ -6,124 +6,200 @@ dotenv.config({ path: '.env.local' })
 
 const client = new MongoClient(process.env.MONGODB_URI!)
 
-const sampleRestaurants = [
+const samplePetProfiles = [
   {
-    name: "La Toscana",
-    address: "Calle Gran Vía 15, Madrid",
-    dishes: [
+    breed: "Golden Retriever",
+    category: "Perro",
+    size: "Grande",
+    characteristics: {
+      energy: "Alta",
+      temperament: ["Amigable", "Inteligente", "Devoto", "Activo"],
+      lifespan: "10-12 años",
+      weight: "25-34 kg",
+      exerciseNeeds: "Alto"
+    },
+    commonIssues: ["Displasia de cadera", "Problemas cardíacos", "Obesidad"],
+    recommendations: [
       {
-        name: "Pasta Primavera Vegana",
-        description: "Deliciosa pasta con verduras de temporada, sin productos animales",
-        ingredients: ["pasta", "calabacín", "tomate", "albahaca", "aceite de oliva"],
-        tags: ["vegano", "vegetariano", "italiano", "rápido"],
-        price: 12.50,
-        image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=500&h=300&fit=crop"
+        _id: "rec_001",
+        type: "training",
+        title: "Entrenamiento básico de obediencia",
+        description: "Los Golden Retrievers son muy inteligentes y responden bien al refuerzo positivo. Sesiones cortas de 10-15 minutos, 2-3 veces al día.",
+        tags: ["obediencia", "cachorro", "básico", "refuerzo-positivo"],
+        difficulty: "Fácil",
+        duration: "2-4 semanas",
+        ageRange: "8 semanas - 6 meses",
+        image: "https://images.unsplash.com/photo-1552053831-71594a27632d?w=500&h=300&fit=crop"
       },
       {
-        name: "Risotto de Pollo",
-        description: "Cremoso risotto con pollo y champiñones, cocción tradicional",
-        ingredients: ["arroz", "pollo", "champiñones", "cebolla", "queso parmesano"],
-        tags: ["tradicional", "italiano", "con carne"],
-        price: 16.00,
-        image: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=500&h=300&fit=crop"
+        _id: "rec_002", 
+        type: "nutrition",
+        title: "Dieta para cachorro Golden Retriever",
+        description: "Alimentación equilibrada rica en proteínas para el crecimiento saludable. 3-4 comidas al día hasta los 6 meses.",
+        tags: ["cachorro", "crecimiento", "proteína", "frecuencia-alta"],
+        difficulty: "Fácil",
+        ageRange: "2-12 meses",
+        portions: "2-3 tazas divididas en 3-4 comidas",
+        image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=500&h=300&fit=crop"
       },
       {
-        name: "Pizza Margherita Sin Gluten",
-        description: "Pizza clásica con masa sin gluten, tomate y mozzarella",
-        ingredients: ["harina sin gluten", "tomate", "mozzarella", "albahaca"],
-        tags: ["sin gluten", "vegetariano", "italiano"],
-        price: 14.00,
-        image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=500&h=300&fit=crop"
+        _id: "rec_003",
+        type: "wellness",
+        title: "Rutina de ejercicio para Golden adulto",
+        description: "Necesitan 60-90 minutos de ejercicio diario. Combina caminatas, natación y juegos de buscar.",
+        tags: ["ejercicio", "adulto", "natación", "juegos"],
+        difficulty: "Moderado",
+        duration: "60-90 minutos diarios",
+        ageRange: "1-8 años",
+        image: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=500&h=300&fit=crop"
       }
     ]
   },
   {
-    name: "El Rincón Español",
-    address: "Plaza Mayor 8, Madrid",
-    dishes: [
+    breed: "Border Collie", 
+    category: "Perro",
+    size: "Mediano",
+    characteristics: {
+      energy: "Muy Alta",
+      temperament: ["Inteligente", "Enérgico", "Trabajador", "Leal"],
+      lifespan: "12-15 años",
+      weight: "14-20 kg",
+      exerciseNeeds: "Muy Alto"
+    },
+    commonIssues: ["Aburrimiento", "Comportamiento destructivo", "Displasia de cadera"],
+    recommendations: [
       {
-        name: "Paella Valenciana",
-        description: "Auténtica paella con pollo, conejo y verduras, arroz bomba",
-        ingredients: ["arroz", "pollo", "conejo", "judías verdes", "tomate", "pimentón"],
-        tags: ["española", "tradicional", "con carne"],
-        price: 18.00,
-        image: "https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=500&h=300&fit=crop"
+        _id: "rec_004",
+        type: "training",
+        title: "Estimulación mental para Border Collie",
+        description: "Necesitan desafíos mentales constantes. Usa puzzles, agility y entrenamientos de trucos complejos.",
+        tags: ["estimulación-mental", "puzzles", "agility", "trucos"],
+        difficulty: "Avanzado",
+        duration: "30-45 minutos diarios",
+        ageRange: "6 meses - adulto",
+        image: "https://images.unsplash.com/photo-1551717743-49959800b1f6?w=500&h=300&fit=crop"
       },
       {
-        name: "Gazpacho Andaluz",
-        description: "Refrescante sopa fría de tomate, ideal para el verano",
-        ingredients: ["tomate", "pepino", "pimiento", "cebolla", "ajo", "aceite de oliva"],
-        tags: ["vegano", "vegetariano", "española", "rápido", "frío"],
-        price: 8.00,
-        image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500&h=300&fit=crop"
-      },
-      {
-        name: "Tortilla Española Picante",
-        description: "Tortilla tradicional con patatas y un toque de pimiento picante",
-        ingredients: ["huevos", "patatas", "cebolla", "pimiento picante"],
-        tags: ["española", "tradicional", "picante", "vegetariano"],
-        price: 10.00,
-        image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=500&h=300&fit=crop"
+        _id: "rec_005",
+        type: "wellness",
+        title: "Plan de ejercicio intensivo",
+        description: "Requieren 2+ horas de actividad física y mental diaria. Incluye correr, frisbee y pastoreo.",
+        tags: ["ejercicio-intensivo", "frisbee", "pastoreo", "resistencia"],
+        difficulty: "Alto",
+        duration: "120+ minutos diarios",
+        ageRange: "1-10 años",
+        image: "https://images.unsplash.com/photo-1551717743-49959800b1f6?w=500&h=300&fit=crop"
       }
     ]
   },
   {
-    name: "Sakura Sushi",
-    address: "Calle Serrano 42, Madrid",
-    dishes: [
+    breed: "Persa",
+    category: "Gato",
+    size: "Mediano",
+    characteristics: {
+      energy: "Baja-Moderada",
+      temperament: ["Tranquilo", "Cariñoso", "Dócil", "Independiente"],
+      lifespan: "12-17 años", 
+      weight: "3-5 kg",
+      exerciseNeeds: "Bajo"
+    },
+    commonIssues: ["Problemas respiratorios", "Enredos en el pelaje", "Problemas oculares"],
+    recommendations: [
       {
-        name: "Sushi Vegano",
-        description: "Variedad de sushi con aguacate, pepino y verduras",
-        ingredients: ["arroz", "aguacate", "pepino", "zanahoria", "alga nori"],
-        tags: ["vegano", "vegetariano", "asiática", "japonesa", "rápido"],
-        price: 15.00,
-        image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=500&h=300&fit=crop"
+        _id: "rec_006",
+        type: "wellness",
+        title: "Cuidado del pelaje persa",
+        description: "Cepillado diario obligatorio para evitar nudos. Baño mensual y limpieza ocular regular.",
+        tags: ["cepillado", "pelaje-largo", "higiene", "cuidado-diario"],
+        difficulty: "Moderado",
+        duration: "15-20 minutos diarios",
+        ageRange: "Todas las edades",
+        image: "https://images.unsplash.com/photo-1513245543132-31f507417b26?w=500&h=300&fit=crop"
       },
       {
-        name: "Ramen Picante",
-        description: "Caldo intenso con fideos, cerdo chashu y verduras",
-        ingredients: ["fideos", "caldo de cerdo", "cerdo", "huevo", "cebolleta", "picante"],
-        tags: ["asiática", "japonesa", "picante", "con carne"],
-        price: 13.50,
-        image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=500&h=300&fit=crop"
-      },
-      {
-        name: "Teriyaki de Pollo",
-        description: "Pollo glaseado con salsa teriyaki y arroz japonés",
-        ingredients: ["pollo", "arroz", "salsa teriyaki", "brócoli", "sésamo"],
-        tags: ["asiática", "japonesa", "con carne", "dulce"],
-        price: 14.00,
-        image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&h=300&fit=crop"
+        _id: "rec_007",
+        type: "nutrition",
+        title: "Dieta para gato persa senior",
+        description: "Alimento senior con fibra para control de peso y fácil digestión. Porciones controladas.",
+        tags: ["senior", "control-peso", "fibra", "digestión"],
+        difficulty: "Fácil",
+        ageRange: "7+ años",
+        portions: "1/2 taza dividida en 2 comidas",
+        image: "https://images.unsplash.com/photo-1545249390-6bdfa286032f?w=500&h=300&fit=crop"
       }
     ]
   },
   {
-    name: "Green Garden",
-    address: "Calle Fuencarral 25, Madrid",
-    dishes: [
+    breed: "Bulldog Francés",
+    category: "Perro", 
+    size: "Pequeño",
+    characteristics: {
+      energy: "Moderada",
+      temperament: ["Amigable", "Adaptable", "Juguetón", "Alerta"],
+      lifespan: "10-12 años",
+      weight: "8-14 kg", 
+      exerciseNeeds: "Moderado"
+    },
+    commonIssues: ["Problemas respiratorios", "Alergias alimentarias", "Problemas de espalda"],
+    recommendations: [
       {
-        name: "Bowl Buddha Energético",
-        description: "Bowl completo con quinoa, verduras y proteína vegetal",
-        ingredients: ["quinoa", "garbanzos", "aguacate", "espinacas", "tomate cherry"],
-        tags: ["vegano", "vegetariano", "saludable", "sin gluten", "rápido"],
-        price: 11.50,
-        image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&h=300&fit=crop"
+        _id: "rec_008",
+        type: "wellness",
+        title: "Ejercicio adaptado para Bulldog Francés",
+        description: "Ejercicio suave debido a problemas respiratorios. Caminatas cortas en clima fresco.",
+        tags: ["ejercicio-suave", "clima-fresco", "respiración", "caminatas-cortas"],
+        difficulty: "Fácil",
+        duration: "20-30 minutos divididos",
+        ageRange: "1+ años",
+        image: "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?w=500&h=300&fit=crop"
       },
       {
-        name: "Ensalada César Vegana",
-        description: "Versión vegana de la clásica ensalada césar",
-        ingredients: ["lechuga romana", "croutons", "tomate", "levadura nutricional"],
-        tags: ["vegano", "vegetariano", "saludable", "rápido", "económico"],
-        price: 9.00,
-        image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500&h=300&fit=crop"
+        _id: "rec_009",
+        type: "nutrition",
+        title: "Dieta hipoalergénica",
+        description: "Alimento con proteína limitada para perros con alergias. Evitar pollo y granos comunes.",
+        tags: ["hipoalergénico", "proteína-limitada", "sin-granos", "alergias"],
+        difficulty: "Moderado",
+        ageRange: "6 meses+",
+        portions: "1 taza dividida en 2 comidas",
+        image: "https://images.unsplash.com/photo-1589941013453-ec89f33b5e95?w=500&h=300&fit=crop"
+      }
+    ]
+  },
+  {
+    breed: "Maine Coon",
+    category: "Gato",
+    size: "Grande", 
+    characteristics: {
+      energy: "Moderada-Alta",
+      temperament: ["Sociable", "Inteligente", "Gentil", "Adaptable"],
+      lifespan: "13-14 años",
+      weight: "4-8 kg",
+      exerciseNeeds: "Moderado-Alto"
+    },
+    commonIssues: ["Cardiomiopatía", "Displasia de cadera", "Problemas dentales"],
+    recommendations: [
+      {
+        _id: "rec_010",
+        type: "training",
+        title: "Socialización temprana para Maine Coon",
+        description: "Aprovecha su naturaleza sociable. Exposición gradual a personas, sonidos y situaciones.",
+        tags: ["socialización", "cachorro", "exposición", "gradual"],
+        difficulty: "Fácil",
+        duration: "Primeros 4 meses",
+        ageRange: "8-16 semanas",
+        image: "https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?w=500&h=300&fit=crop"
       },
       {
-        name: "Hamburguesa de Lentejas",
-        description: "Hamburguesa casera de lentejas con pan integral",
-        ingredients: ["lentejas", "pan integral", "lechuga", "tomate", "cebolla"],
-        tags: ["vegano", "vegetariano", "casera", "económico"],
-        price: 10.50,
-        image: "https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=500&h=300&fit=crop"
+        _id: "rec_011",
+        type: "wellness", 
+        title: "Juegos interactivos para gatos grandes",
+        description: "Necesitan juguetes grandes y resistentes. Torres para trepar y juegos de caza simulada.",
+        tags: ["juegos-interactivos", "gato-grande", "trepar", "caza-simulada"],
+        difficulty: "Moderado",
+        duration: "30-45 minutos diarios",
+        ageRange: "6 meses+",
+        image: "https://images.unsplash.com/photo-1574144611937-0df059b5ef3e?w=500&h=300&fit=crop"
       }
     ]
   }
@@ -131,40 +207,58 @@ const sampleRestaurants = [
 
 async function seedDatabase() {
   try {
-    console.log('Conectando a MongoDB...')
+    console.log('🐾 Conectando a MongoDB...')
     await client.connect()
     
-    const db = client.db('komi')
-    const collection = db.collection('restaurants')
+    const db = client.db('pawsitive')
+    const collection = db.collection('pets')
     
     // Limpiar colección existente
-    console.log('Limpiando datos existentes...')
+    console.log('🧹 Limpiando datos existentes...')
     await collection.deleteMany({})
     
-    // Insertar nuevos datos
-    console.log('Insertando restaurantes y platos...')
-    const result = await collection.insertMany(sampleRestaurants)
+    // Insertar nuevos datos de mascotas
+    console.log('🐕 Insertando perfiles de mascotas y recomendaciones...')
+    const result = await collection.insertMany(samplePetProfiles)
     
     console.log(`✅ Seeding completado!`)
-    console.log(`📍 Insertados ${result.insertedCount} restaurantes`)
+    console.log(`🐾 Insertados ${result.insertedCount} perfiles de razas`)
     
     // Mostrar estadísticas
-    const totalDishes = sampleRestaurants.reduce((total, restaurant) => total + restaurant.dishes.length, 0)
-    console.log(`🍽️  Total de platos: ${totalDishes}`)
+    const totalRecommendations = samplePetProfiles.reduce((total, pet) => total + pet.recommendations.length, 0)
+    console.log(`💡 Total de recomendaciones: ${totalRecommendations}`)
+    
+    // Estadísticas por tipo
+    const trainingRecs = samplePetProfiles.reduce((total, pet) => 
+      total + pet.recommendations.filter(r => r.type === 'training').length, 0)
+    const nutritionRecs = samplePetProfiles.reduce((total, pet) => 
+      total + pet.recommendations.filter(r => r.type === 'nutrition').length, 0)  
+    const wellnessRecs = samplePetProfiles.reduce((total, pet) => 
+      total + pet.recommendations.filter(r => r.type === 'wellness').length, 0)
+    
+    console.log(`🎓 Entrenamiento: ${trainingRecs} recomendaciones`)
+    console.log(`🥩 Nutrición: ${nutritionRecs} recomendaciones`)
+    console.log(`🧘 Bienestar: ${wellnessRecs} recomendaciones`)
     
     // Crear índices para mejorar el rendimiento de búsqueda
-    console.log('Creando índices...')
-    await collection.createIndex({ "dishes.ingredients": 1 })
-    await collection.createIndex({ "dishes.tags": 1 })
-    await collection.createIndex({ "dishes.price": 1 })
+    console.log('📊 Creando índices...')
+    await collection.createIndex({ "breed": 1 })
+    await collection.createIndex({ "category": 1 })
+    await collection.createIndex({ "size": 1 })
+    await collection.createIndex({ "recommendations.type": 1 })
+    await collection.createIndex({ "recommendations.tags": 1 })
+    await collection.createIndex({ "recommendations.ageRange": 1 })
+    await collection.createIndex({ "characteristics.energy": 1 })
+    await collection.createIndex({ "commonIssues": 1 })
     
     console.log('✅ Índices creados correctamente')
+    console.log('🎉 Base de datos Pawsitive lista para usar!')
     
   } catch (error) {
     console.error('❌ Error en el seeding:', error)
   } finally {
     await client.close()
-    console.log('Conexión cerrada')
+    console.log('🔐 Conexión cerrada')
   }
 }
 
