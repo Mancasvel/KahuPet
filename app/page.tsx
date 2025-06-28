@@ -502,7 +502,7 @@ export default function Home() {
                   size="lg"
                   placeholder={
                     selectedPet 
-                      ? `Ej: ${selectedPet.nombre} no deja de ladrar cuando llegan visitas...`
+                      ? `Ej: ${selectedPet.nombre} se altera cuando llegan visitas...`
                       : "Ej: Mi golden retriever no deja de ladrar cuando llegan visitas..."
                   }
                   value={query}
