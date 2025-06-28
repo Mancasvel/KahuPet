@@ -7,6 +7,7 @@ import { RecommendationCard } from '@/components/RecommendationCard'
 import { PetVoiceChat } from '@/components/PetVoiceChat'
 import { NavbarComponent } from '@/components/Navbar'
 import { Footer } from '@/components/Footer'
+import PetRegistrationForm from '@/components/PetRegistrationForm'
 
 interface Recommendation {
   _id: string
@@ -57,6 +58,8 @@ export default function Home() {
   const [petVoiceResponse, setPetVoiceResponse] = useState<PetVoiceResponse | null>(null)
   const [selectedRecommendations, setSelectedRecommendations] = useState<Recommendation[]>([])
   const [searchMode, setSearchMode] = useState<'profiles' | 'recommendations'>('recommendations')
+  const [showRegistrationForm, setShowRegistrationForm] = useState(false)
+  const [userPet, setUserPet] = useState<any>(null)
 
   // Cargar todos los perfiles de mascotas al inicio
   const loadAllPetProfiles = useCallback(async () => {
@@ -96,7 +99,10 @@ export default function Home() {
       const response = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ 
+          query,
+          userPet: userPet // Enviar información de la mascota registrada si existe
+        })
       })
 
       if (response.ok) {
@@ -169,6 +175,12 @@ export default function Home() {
     }
   }
 
+  const handlePetRegistrationSuccess = (pet: any) => {
+    setUserPet(pet)
+    console.log('Mascota registrada exitosamente:', pet)
+    // Aquí podrías actualizar el LLM para usar la información de la mascota
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navbar estilo Pawsitive */}
@@ -215,7 +227,7 @@ export default function Home() {
           </div>
 
           {/* Ejemplos de consultas */}
-          <div className="flex flex-wrap justify-center gap-3 mb-8">
+          <div className="flex flex-wrap justify-center gap-3 mb-6">
             {[
               "Mi perro ladra mucho 🐕",
               "Dieta para gato senior 🐱",
@@ -232,6 +244,18 @@ export default function Home() {
                 {example}
               </Button>
             ))}
+          </div>
+
+          {/* Botón de registro de mascota */}
+          <div className="flex justify-center mb-8">
+            <Button
+              size="lg"
+              onClick={() => setShowRegistrationForm(true)}
+              className="bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold px-8 py-3 shadow-lg hover:shadow-xl transition-all"
+            >
+              <span className="text-xl mr-2">🐾</span>
+              {userPet ? `${userPet.name} registrado` : 'Registra tu mascota'}
+            </Button>
           </div>
         </div>
 
@@ -393,6 +417,13 @@ export default function Home() {
       </div>
 
       <Footer />
+
+      {/* Formulario de registro de mascota */}
+      <PetRegistrationForm
+        isOpen={showRegistrationForm}
+        onClose={() => setShowRegistrationForm(false)}
+        onSuccess={handlePetRegistrationSuccess}
+      />
     </div>
   )
 } 

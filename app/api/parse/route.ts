@@ -18,10 +18,15 @@ const client = process.env.MONGODB_URI ? new MongoClient(process.env.MONGODB_URI
 
 export async function POST(request: NextRequest) {
   try {
-    const { query } = await request.json()
+    const { query, userPet } = await request.json()
 
     if (!query) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
+    }
+
+    console.log('🐾 Consulta recibida:', query)
+    if (userPet) {
+      console.log('🏷️ Mascota registrada:', userPet.name, '(', userPet.breed, ')')
     }
 
     // Si no están configuradas las APIs reales, usar datos de demostración
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
     
     await client.connect()
-    const db = client.db('pawsitive')
+    const db = client.db('Pawsitive')
     const petsCollection = db.collection('pets')
 
     // Obtener todas las recomendaciones disponibles para pasarlas al LLM
@@ -84,8 +89,8 @@ export async function POST(request: NextRequest) {
 
     console.log(`🐾 Encontradas ${allRecommendations.length} recomendaciones en ${allPetProfiles.length} perfiles de mascotas`)
 
-    // Llamar a OpenRouter con el contexto completo de recomendaciones
-    const llmResponse = await callOpenRouter(query, allRecommendations)
+    // Llamar a OpenRouter con el contexto completo de recomendaciones y la mascota del usuario
+    const llmResponse = await callOpenRouter(query, allRecommendations, userPet)
     
     if (!llmResponse) {
       return NextResponse.json({ error: 'Error processing query' }, { status: 500 })

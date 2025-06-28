@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     await client.connect()
-    const db = client.db('pawsitive')
+    const db = client.db('Pawsitive')
     const collection = db.collection('pets')
 
     // Construir pipeline de agregación para obtener recomendaciones
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     await client.connect()
-    const db = client.db('pawsitive')
+    const db = client.db('Pawsitive')
     const collection = db.collection('pets')
 
     // Generar ID único para la recomendación

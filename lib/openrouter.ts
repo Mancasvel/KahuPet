@@ -12,7 +12,7 @@ interface LLMResponse {
   }
 }
 
-export async function callOpenRouter(userQuery: string, availableRecommendations?: any[]): Promise<LLMResponse | null> {
+export async function callOpenRouter(userQuery: string, availableRecommendations?: any[], userPet?: any): Promise<LLMResponse | null> {
   try {
     // Construir contexto de recomendaciones disponibles si se proporciona
     let recommendationsContext = ""
@@ -29,6 +29,29 @@ ${availableRecommendations.map(rec => `
   Descripción: ${rec.description || 'Sin descripción'}
   ID: ${rec._id}
 `).join('')}
+`
+    }
+
+    // Construir contexto de la mascota del usuario si está disponible
+    let userPetContext = ""
+    if (userPet) {
+      userPetContext = `
+
+MASCOTA REGISTRADA DEL USUARIO:
+- Nombre: ${userPet.name}
+- Tipo: ${userPet.type}
+- Raza: ${userPet.breed}
+- Edad: ${userPet.age || 'No especificada'} años
+- Peso: ${userPet.weight || 'No especificado'} kg
+- Género: ${userPet.gender || 'No especificado'}
+- Notas: ${userPet.notes || 'Ninguna'}
+
+IMPORTANTE: Como el usuario YA TIENE una mascota registrada, en la respuesta debes:
+1. Establecer hasRegisteredPet: true 
+2. Usar el nombre "${userPet.name}" como petName
+3. Usar "${userPet.breed}" como petBreed
+4. SIEMPRE generar un voiceMessage personalizado como si fueras ${userPet.name} (${userPet.breed}) hablando directamente a su humano
+5. Hacer referencia específica a la información de la mascota cuando sea relevante (edad, raza, características)
 `
     }
 
@@ -71,6 +94,8 @@ Donde:
   - petBreed: raza si se especifica o se puede inferir
   - voiceMessage: respuesta como si fueras la mascota hablando con cariño a su humano
   - emotionalTone: tono emocional ("cariñoso", "juguetón", "preocupado", "emocionado")
+
+${userPetContext}
 
 ${recommendationsContext}
 

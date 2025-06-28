@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     }
 
     await client.connect()
-    const db = client.db('pawsitive')
+    const db = client.db('Pawsitive')
     const collection = db.collection('pets')
 
     // Construir filtros de búsqueda
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     await client.connect()
-    const db = client.db('pawsitive')
+    const db = client.db('Pawsitive')
     const collection = db.collection('pets')
 
     const result = await collection.insertOne({

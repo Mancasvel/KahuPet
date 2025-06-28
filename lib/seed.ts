@@ -210,7 +210,7 @@ async function seedDatabase() {
     console.log('🐾 Conectando a MongoDB...')
     await client.connect()
     
-    const db = client.db('pawsitive')
+    const db = client.db('Pawsitive')
     const collection = db.collection('pets')
     
     // Limpiar colección existente
