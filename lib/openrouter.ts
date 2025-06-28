@@ -152,6 +152,19 @@ REGLAS PARA voiceMessage EXTENDIDO:
 - IMPORTANTE: Usar \\n para separar párrafos en el JSON (NO saltos de línea literales)
 - FORMATO JSON: El voiceMessage debe ser una cadena válida con \\n escapados
 
+REGLAS PARA emotionalTone DINÁMICO:
+- Debe reflejar el estado emocional real de la mascota basándose en la consulta
+- Estados disponibles: "feliz", "juguetón", "preocupado", "ansioso", "triste", "avergonzado", "emocionado", "calmado", "confundido", "culpable", "orgulloso", "curioso", "nervioso", "relajado", "enérgico"
+- CRITERIOS para determinar el estado:
+  * Problemas de comportamiento (ladridos, destructivo): "avergonzado" o "confundido"
+  * Problemas de salud (dolor, enfermedad): "preocupado" o "triste"
+  * Problemas de aseo (caja arena, accidentes): "culpable" o "ansioso"
+  * Consultas sobre ejercicio/juego: "emocionado" o "enérgico"
+  * Consultas sobre comida: "feliz" o "curioso"
+  * Problemas de ansiedad/miedo: "nervioso" o "ansioso"
+  * Consultas generales/positivas: "feliz" o "juguetón"
+  * Entrenamiento nuevo: "orgulloso" o "emocionado"
+
 REGLA CLAVE: Si hasRegisteredPet es true, SIEMPRE generar voiceMessage. Si es false, dejar voiceMessage vacío.
 
 Ejemplos:
@@ -167,7 +180,7 @@ Ejemplos:
     "petName": "",
     "petBreed": "golden retriever", 
     "voiceMessage": "¡Guau guau! Sé que tienes razón sobre mis ladridos cuando llegan visitas... 🐕 Como Golden Retriever, tengo esa naturaleza súper amigable que me hace emocionarme muchísimo cada vez que alguien nuevo viene a casa. Mi instinto de protección y mi amor por socializar se combinan de una manera que a veces no puedo controlar, ¡es como si toda mi energía de 30 kilos de amor dorado explotara de una vez!\\n\\nSabes, a mis 2 años estoy en esa etapa donde mi cerebro de retriever está súper activo y quiero participar en todo lo que pasa en MI casa. Los Golden como yo somos conocidos por ser perros 'parlanchines' - nos encanta 'hablar' y expresar nuestras emociones. Cuando ladro, no es solo ruido, es mi manera de decirte '¡OIGAN, TENEMOS VISITAS Y ESTOY SÚPER FELIZ!' Pero entiendo que necesito aprender autocontrol, especialmente porque mi raza es famosa por ser obediente y entrenable. 🎾\\n\\n¿Me ayudas a canalizar esta energía de manera positiva? Podríamos usar mi amor natural por agradar y mi inteligencia para crear una rutina de saludo más calmada. Tal vez puedas enseñarme comandos específicos para cuando llegan visitas, y así puedo sentirme útil sin overwhelmar a todos con mi entusiasmo. ¡Prometo que con práctica y mucho amor, puedo convertir esta explosión de ladridos en una bienvenida más elegante y digna de un Golden! Te amo mucho, humano mío 💛",
-    "emotionalTone": "juguetón"
+    "emotionalTone": "confundido"
   }
 }
 
@@ -186,6 +199,36 @@ Ejemplos:
   }
 }
 
+4. "Mi perro parece triste y no quiere jugar" →
+{
+  "petCharacteristics": ["perro"],
+  "issues": ["tristeza", "falta de energía", "depresión"],
+  "recommendationTypes": ["wellness", "veterinario"],
+  "specificRecommendations": [],
+  "petVoiceResponse": {
+    "hasRegisteredPet": true,
+    "petName": "",
+    "petBreed": "perro",
+    "voiceMessage": "Woof... humano querido, últimamente me siento un poco desanimado y no tengo las ganas de siempre de jugar o correr. 😔 No estoy seguro de qué me pasa, pero es como si una nubecita gris estuviera siguiéndome y quitándome esa chispa que normalmente tengo. Tal vez sea algo físico que no puedo expresar, o quizás algo en mi entorno ha cambiado y mi corazón canino está procesando emociones que no entiendo completamente.\\n\\nLos perros podemos experimentar cambios de humor al igual que los humanos, y a veces necesitamos un poco de ayuda extra para volver a sentirnos como nosotros mismos. Puede ser que necesite más estímulo mental, un cambio en mi rutina, o incluso que el veterinario me revise para asegurarme de que todo esté bien físicamente.\\n\\n¿Podrías darme un poco más de atención especial, tal vez probar nuevos juegos o actividades, y considerar una visita al veterinario? Con tu amor y paciencia, estoy seguro de que pronto volveré a ser el perro alegre y juguetón que conoces. Te necesito ahora más que nunca 💙",
+    "emotionalTone": "triste"
+  }
+}
+
+5. "Mi gato siempre tiene hambre y maulla por comida" →
+{
+  "petCharacteristics": ["gato"],
+  "issues": ["hambre excesiva", "maullidos", "comportamiento alimentario"],
+  "recommendationTypes": ["nutrition", "wellness"],
+  "specificRecommendations": [],
+  "petVoiceResponse": {
+    "hasRegisteredPet": true,
+    "petName": "",
+    "petBreed": "gato",
+    "voiceMessage": "¡Miau miau! 🍽️ ¡Humano querido! Tengo que contarte sobre mi relación muy intensa con la comida. Sé que parezco estar siempre pidiendo más y más comida, y entiendo que puede ser confuso para ti. Como gato, mi instinto ancestral me dice que debo asegurarme de tener suficiente alimento disponible, especialmente porque en la naturaleza nunca sabíamos cuándo sería nuestra próxima comida.\\n\\nPero también es posible que mi comportamiento tenga otras causas. Algunos gatos comemos por aburrimiento, estrés, o incluso por problemas médicos como hipertiroidismo o diabetes. Mi maullido constante por comida puede ser mi manera de comunicarte que algo más profundo está pasando. También puede ser que no me estés dando suficientes comidas pequeñas a lo largo del día, que es como preferimos comer los gatos.\\n\\n¿Podrías evaluar mi rutina de alimentación, asegurarte de que estoy recibiendo la cantidad correcta según mi peso y edad, y tal vez considerar dividir mi comida en más porciones pequeñas? Si continúo comportándome así, una visita al veterinario sería muy útil para descartar problemas de salud. ¡Mientras tanto, gracias por preocuparte por mi bienestar! 💕",
+    "emotionalTone": "curioso"
+  }
+}
+
 3. "Mi gato Max no usa la caja de arena" →
 {
   "petCharacteristics": ["gato"],
@@ -197,7 +240,37 @@ Ejemplos:
     "petName": "Max",
     "petBreed": "gato",
     "voiceMessage": "Miau... humano querido, necesito hablar contigo sobre un tema muy delicado e importante para mi bienestar diario. 😿 Como gato, mi instinto natural me dice que debo enterrar mis desechos para mantener mi territorio limpio y seguro, pero algo está interfiriendo con este comportamiento fundamental. Puede ser que la ubicación de mi caja no me dé la privacidad que necesito, o que el tipo de arena no sea compatible con la sensibilidad de mis patitas, o incluso que detecte olores de productos de limpieza que me resultan desagradables.\\n\\nMi comportamiento también puede estar relacionado con estrés, cambios en la casa, o incluso problemas de salud que no son visibles. Los gatos somos criaturas de hábitos muy específicos, y cualquier alteración en nuestro ambiente puede afectar nuestros patrones de aseo. Es importante que sepas que no estoy siendo 'malo' intencionalmente - este comportamiento es mi manera de comunicarte que algo no está bien en mi mundo felino.\\n\\n¿Podrías ayudarme revisando si mi caja está en un lugar tranquilo y accesible, si la arena está limpia y es del tipo que me gusta, y si no hay olores extraños cerca? También sería bueno que un veterinario me revise para descartar problemas de salud. Con un poco de detective work y mucho amor, estoy seguro de que podemos resolver este problema juntos y volver a mi rutina normal de gato feliz 💙",
-    "emotionalTone": "preocupado"
+    "emotionalTone": "culpable"
+  }
+}
+
+6. "Mi cachorro aprendió a sentarse, ¿qué le enseño ahora?" →
+{
+  "petCharacteristics": ["cachorro"],
+  "issues": ["entrenamiento avanzado", "nuevo comando"],
+  "recommendationTypes": ["training"],
+  "specificRecommendations": [],
+  "petVoiceResponse": {
+    "hasRegisteredPet": true,
+    "petName": "",
+    "petBreed": "cachorro",
+    "voiceMessage": "¡WOOF WOOF! 🎉 ¡Humano increíble! ¡Estoy tan emocionado de contarte lo orgulloso que me siento! Aprender a sentarme ha sido uno de los logros más grandes de mi joven vida. Cada vez que lo hago y veo tu cara de felicidad, mi colita no puede parar de moverse y siento como si hubiera conquistado el mundo entero. ¡Es la mejor sensación del universo canino!\\n\\nComo cachorro, mi cerebrito está súper activo y listo para absorber todo lo que me enseñes. ¡Tengo tanta energía y ganas de aprender más trucos! Me encanta el proceso de entrenamiento porque significa tiempo especial contigo, recompensas deliciosas, y la satisfacción de hacer algo bien. Mi instinto de cachorro me dice que aprender cosas nuevas es súper divertido y me hace sentir más seguro y confiado.\\n\\n¿Podrías enseñarme algo nuevo? ¡Estoy súper emocionado por el próximo desafío! Tal vez 'quedarse', 'ven aquí', o incluso algo súper cool como 'dar la pata'. ¡Prometo poner toda mi atención de cachorro y hacer mi mejor esfuerzo! ¡Eres el mejor entrenador que un cachorro podría pedir! 🐕✨",
+    "emotionalTone": "orgulloso"
+  }
+}
+
+7. "Quiero empezar a hacer ejercicio con mi perro" →
+{
+  "petCharacteristics": ["perro"],
+  "issues": ["ejercicio", "actividad física"],
+  "recommendationTypes": ["wellness"],
+  "specificRecommendations": [],
+  "petVoiceResponse": {
+    "hasRegisteredPet": true,
+    "petName": "",
+    "petBreed": "perro",
+    "voiceMessage": "¡GUAU GUAU GUAU! 🏃‍♂️ ¡¿EN SERIO?! ¡¿Vamos a hacer ejercicio JUNTOS?! ¡Esto es literalmente lo MEJOR que me ha pasado en toda mi vida perruna! Mi cola está moviéndose tan rápido que podría despegar como un helicóptero. ¡No puedo contener mi emoción! Esto significa que vamos a ser un EQUIPO de verdad, corriendo juntos, explorando el mundo, y siendo los mejores compañeros de aventuras.\\n\\nComo perro, el ejercicio no es solo diversión para mí - es una necesidad absoluta para mi bienestar físico y mental. ¡Imagínate! Podríamos correr por el parque, hacer hiking en senderos nuevos, o incluso intentar deportes caninos. Mi resistencia, mi fuerza, y mi coordinación van a mejorar muchísimo, y lo mejor de todo es que lo haremos JUNTOS. ¡Voy a ser tu motivación perruna personal!\\n\\n¡Empecemos gradualmente para que ambos nos acostumbremos! Podríamos comenzar con caminatas más largas, después trotar suavemente, y luego ir aumentando la intensidad. ¡Voy a ser tu compañero de ejercicio más leal y entusiasta del mundo! ¡Prepárate para la mejor rutina de ejercicios de tu vida! 🎾💪",
+    "emotionalTone": "emocionado"
   }
 }
 
@@ -206,7 +279,8 @@ IMPORTANTE:
 2. Para petVoiceResponse: SIEMPRE base la respuesta en los issues/necesidades específicas mencionadas.
 3. Si detectas mascota registrada, el voiceMessage debe ser personal y específico al problema.
 4. Si no hay mascota registrada, mantén petVoiceResponse con valores vacíos excepto hasRegisteredPet: false.
-5. La prioridad es: issues específicos > características de raza > tipos generales.`
+5. La prioridad es: issues específicos > características de raza > tipos generales.
+6. El emotionalTone debe reflejar EXACTAMENTE el estado emocional apropiado para la situación específica.`
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -330,6 +404,28 @@ function extractKeywordsFromQuery(query: string): LLMResponse {
   // Detectar si tiene mascota registrada basado en pronombres posesivos
   const hasRegisteredPet = lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota'))
   
+  // Determinar estado emocional basado en el tipo de consulta
+  let emotionalTone = ''
+  if (hasRegisteredPet) {
+    if (lowerQuery.includes('ladridos') || lowerQuery.includes('destructivo') || lowerQuery.includes('mal comportamiento')) {
+      emotionalTone = 'confundido'
+    } else if (lowerQuery.includes('triste') || lowerQuery.includes('enfermo') || lowerQuery.includes('dolor')) {
+      emotionalTone = 'triste'
+    } else if (lowerQuery.includes('caja de arena') || lowerQuery.includes('accidente') || lowerQuery.includes('orinó')) {
+      emotionalTone = 'culpable'
+    } else if (lowerQuery.includes('ejercicio') || lowerQuery.includes('jugar') || lowerQuery.includes('correr')) {
+      emotionalTone = 'emocionado'
+    } else if (lowerQuery.includes('comida') || lowerQuery.includes('hambre') || lowerQuery.includes('alimentar')) {
+      emotionalTone = 'curioso'
+    } else if (lowerQuery.includes('miedo') || lowerQuery.includes('ansiedad') || lowerQuery.includes('nervioso')) {
+      emotionalTone = 'ansioso'
+    } else if (lowerQuery.includes('aprendió') || lowerQuery.includes('entrenamiento') || lowerQuery.includes('comando')) {
+      emotionalTone = 'orgulloso'
+    } else {
+      emotionalTone = 'feliz'
+    }
+  }
+  
   return {
     petCharacteristics: foundCharacteristics,
     issues: foundIssues,
@@ -340,7 +436,7 @@ function extractKeywordsFromQuery(query: string): LLMResponse {
       petName: '',
       petBreed: foundCharacteristics.find(char => char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine')) || '',
       voiceMessage: hasRegisteredPet ? "¡Hola mi querido humano! 🐾 Sé que necesitas ayuda conmigo y estoy súper emocionado de poder hablar contigo sobre lo que me preocupa. Como tu mascota registrada, quiero que sepas que cada comportamiento mío tiene una razón, y juntos podemos encontrar la mejor solución.\\n\\nMi instinto me dice que confianza y amor son la base de nuestra relación, y estoy dispuesto a aprender y mejorar todo lo que necesite para ser tu compañero perfecto. Cada raza tiene sus propias características especiales, y me encanta poder compartir contigo qué hace que mi personalidad sea única.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío y fortalecer nuestro vínculo. ¡Eres el mejor humano que podría tener! 💕" : '',
-      emotionalTone: hasRegisteredPet ? 'emocionado' : ''
+      emotionalTone
     }
   }
 } 

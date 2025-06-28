@@ -19,27 +19,49 @@ export function PetVoiceChat({ petVoiceResponse }: PetVoiceChatProps) {
 
   const getEmotionalIcon = (tone: string) => {
     switch(tone.toLowerCase()) {
-      case 'cariñoso': return '🥰'
+      case 'feliz': return '😊'
       case 'juguetón': return '😄'
       case 'preocupado': return '🥺'
+      case 'ansioso': return '😰'
+      case 'triste': return '😢'
+      case 'avergonzado': return '😳'
       case 'emocionado': return '🤩'
-      case 'tranquilo': return '😌'
+      case 'calmado': return '😌'
+      case 'confundido': return '😕'
+      case 'culpable': return '😔'
+      case 'orgulloso': return '😤'
       case 'curioso': return '🤔'
-      case 'feliz': return '😊'
-      default: return '💕'
+      case 'nervioso': return '😬'
+      case 'relajado': return '😴'
+      case 'enérgico': return '⚡'
+      // Estados adicionales anteriores
+      case 'cariñoso': return '🥰'
+      case 'tranquilo': return '😌'
+      default: return '🐾'
     }
   }
 
   const getEmotionalColor = (tone: string) => {
     switch(tone.toLowerCase()) {
-      case 'cariñoso': return 'bg-pink-100 text-pink-700 border-pink-200'
+      case 'feliz': return 'bg-amber-100 text-amber-700 border-amber-200'
       case 'juguetón': return 'bg-yellow-100 text-yellow-700 border-yellow-200'
       case 'preocupado': return 'bg-blue-100 text-blue-700 border-blue-200'
+      case 'ansioso': return 'bg-orange-100 text-orange-700 border-orange-200'
+      case 'triste': return 'bg-gray-100 text-gray-700 border-gray-200'
+      case 'avergonzado': return 'bg-red-100 text-red-700 border-red-200'
       case 'emocionado': return 'bg-purple-100 text-purple-700 border-purple-200'
+      case 'calmado': return 'bg-green-100 text-green-700 border-green-200'
+      case 'confundido': return 'bg-indigo-100 text-indigo-700 border-indigo-200'
+      case 'culpable': return 'bg-slate-100 text-slate-700 border-slate-200'
+      case 'orgulloso': return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+      case 'curioso': return 'bg-cyan-100 text-cyan-700 border-cyan-200'
+      case 'nervioso': return 'bg-rose-100 text-rose-700 border-rose-200'
+      case 'relajado': return 'bg-teal-100 text-teal-700 border-teal-200'
+      case 'enérgico': return 'bg-lime-100 text-lime-700 border-lime-200'
+      // Estados adicionales anteriores
+      case 'cariñoso': return 'bg-pink-100 text-pink-700 border-pink-200'
       case 'tranquilo': return 'bg-green-100 text-green-700 border-green-200'
-      case 'curioso': return 'bg-orange-100 text-orange-700 border-orange-200'
-      case 'feliz': return 'bg-amber-100 text-amber-700 border-amber-200'
-      default: return 'bg-pink-100 text-pink-700 border-pink-200'
+      default: return 'bg-gray-100 text-gray-700 border-gray-200'
     }
   }
 
