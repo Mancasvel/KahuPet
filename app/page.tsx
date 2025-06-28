@@ -106,7 +106,7 @@ export default function Home() {
             setSelectedPet(pets[0])
           } else {
             // Si hay mascota seleccionada, verificar que aún existe en la lista
-            const stillExists = pets.find(pet => pet._id === selectedPet._id)
+            const stillExists = pets.find((pet: any) => pet._id === selectedPet._id)
             if (!stillExists) {
               // Si la mascota seleccionada ya no existe, seleccionar la primera disponible
               setSelectedPet(pets[0])

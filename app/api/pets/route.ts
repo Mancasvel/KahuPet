@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MongoClient } from 'mongodb'
-
-const client = process.env.MONGODB_URI ? new MongoClient(process.env.MONGODB_URI, {
-  tlsAllowInvalidCertificates: true,
-  tlsAllowInvalidHostnames: true,
-}) : null
+import { withPawsitiveDB } from '@/lib/mongodb'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,32 +8,26 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category')
     const size = searchParams.get('size')
 
-    if (!client) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
-    }
+    const pets = await withPawsitiveDB(async (db) => {
+      const collection = db.collection('pets')
 
-    await client.connect()
-    const db = client.db('Pawsitive')
-    const collection = db.collection('pets')
+      // Construir filtros de búsqueda
+      const filters: any = {}
+      
+      if (breed) {
+        filters.breed = new RegExp(breed, 'i')
+      }
+      
+      if (category) {
+        filters.category = new RegExp(category, 'i')
+      }
+      
+      if (size) {
+        filters.size = new RegExp(size, 'i')
+      }
 
-    // Construir filtros de búsqueda
-    const filters: any = {}
-    
-    if (breed) {
-      filters.breed = new RegExp(breed, 'i')
-    }
-    
-    if (category) {
-      filters.category = new RegExp(category, 'i')
-    }
-    
-    if (size) {
-      filters.size = new RegExp(size, 'i')
-    }
-
-    const pets = await collection.find(filters).toArray()
-    
-    await client.close()
+      return await collection.find(filters).toArray()
+    })
 
     return NextResponse.json(pets)
 
@@ -52,26 +41,20 @@ export async function POST(request: NextRequest) {
   try {
     const petData = await request.json()
 
-    if (!client) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
-    }
-
-    // Validar datos requeridos
+    // Validar datos requeridos para perfil de raza
     if (!petData.breed || !petData.category) {
       return NextResponse.json({ error: 'Breed and category are required' }, { status: 400 })
     }
 
-    await client.connect()
-    const db = client.db('Pawsitive')
-    const collection = db.collection('pets')
+    const result = await withPawsitiveDB(async (db) => {
+      const collection = db.collection('pets')
 
-    const result = await collection.insertOne({
-      ...petData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      return await collection.insertOne({
+        ...petData,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      })
     })
-
-    await client.close()
 
     return NextResponse.json({ 
       message: 'Pet profile created successfully',

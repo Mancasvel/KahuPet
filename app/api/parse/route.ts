@@ -110,9 +110,9 @@ export async function POST(request: NextRequest) {
       if (breedFilters.length > 0) {
         searchFilters['breed'] = {
           $in: breedFilters.map((breed: string) => new RegExp(breed, 'i'))
-        }
       }
-      
+    }
+
       // Filtrar por categoría (perro, gato)
       const categoryFilters = llmResponse.petCharacteristics.filter(char => 
         char.includes('perro') || char.includes('gato')
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       
       matchingRecommendations.push(...specificRecs)
     }
-
+    
     // FASE 2: Filtrado ESTRICTO por coincidencias múltiples obligatorias
     const strictlyFilteredRecs: any[] = []
     
@@ -252,9 +252,9 @@ export async function POST(request: NextRequest) {
             issueMatches++
             relevanceScore += 6 // Peso medio-alto para problemas específicos
             console.log(`✅ Issue match: ${rec.title} matches issue "${issue}"`)
-          }
         }
-        
+      }
+
         if (issueMatches > 0) {
           achievedMatches++
           relevanceScore += issueMatches * 3 // Bonus por múltiples matches de issues
@@ -286,7 +286,7 @@ export async function POST(request: NextRequest) {
         console.log(`🚫 Excluido: ${rec.title} - Score: ${relevanceScore}, Matches: ${achievedMatches}/${requiredMatches}`)
       }
     }
-
+    
     // Ordenar por relevancia (score alto = más relevante)
     strictlyFilteredRecs.sort((a, b) => {
       // Priorizar primero por número de matches conseguidos
@@ -296,7 +296,7 @@ export async function POST(request: NextRequest) {
       // Luego por score total
       return b.relevanceScore - a.relevanceScore
     })
-
+    
     // Agregar los mejores resultados filtrados
     matchingRecommendations.push(...strictlyFilteredRecs.slice(0, 8))
 
@@ -382,8 +382,8 @@ function generateSummary(query: string, llmResponse: any, totalRecommendations: 
   if (animalTypes.length > 0) {
     const animalEmoji = animalTypes[0].toLowerCase().includes('perro') ? '🐕' : '🐱'
     summaryParts.push(`${animalEmoji} ${animalTypes[0]}`)
-  }
-  
+}
+
   // Agregar raza si es específica
   if (breeds.length > 0) {
     summaryParts.push(`raza ${breeds[0]}`)
@@ -464,7 +464,7 @@ function getDemoResponse(query: string) {
 
   // Filtrar recomendaciones basadas en la consulta
   let filteredRecommendations = demoRecommendations
-  
+
   if (lowerQuery.includes('entren') || lowerQuery.includes('obediencia') || lowerQuery.includes('ladra')) {
     filteredRecommendations = demoRecommendations.filter(r => r.type === 'training')
   } else if (lowerQuery.includes('comida') || lowerQuery.includes('alimenta') || lowerQuery.includes('dieta')) {

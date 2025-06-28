@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MongoClient } from 'mongodb'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { withPawsitiveDB } from '@/lib/mongodb'
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://manuel:1234@cluster0.jt4ra.mongodb.net/"
 const JWT_SECRET = process.env.JWT_SECRET || "kahupet-secret-key-2024"
 
 export async function POST(request: NextRequest) {
@@ -18,56 +17,46 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const client = new MongoClient(uri)
-    await client.connect()
-    
-    const db = client.db('Kahupet')
-    const usersCollection = db.collection('users')
+    const result = await withPawsitiveDB(async (db) => {
+      const usersCollection = db.collection('users')
 
-    // Buscar usuario por email
-    const user = await usersCollection.findOne({ email: email.toLowerCase() })
-    if (!user) {
-      await client.close()
-      return NextResponse.json(
-        { error: 'Credenciales inválidas' },
-        { status: 401 }
-      )
-    }
-
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(password, user.password)
-    if (!isPasswordValid) {
-      await client.close()
-      return NextResponse.json(
-        { error: 'Credenciales inválidas' },
-        { status: 401 }
-      )
-    }
-
-    // Contar mascotas del usuario
-    const userPetsCollection = db.collection('user_pets')
-    const petCount = await userPetsCollection.countDocuments({ userId: user._id.toString() })
-
-    // Actualizar petCount en usuario
-    await usersCollection.updateOne(
-      { _id: user._id },
-      { 
-        $set: { 
-          petCount,
-          lastLogin: new Date(),
-          updatedAt: new Date()
-        }
+      // Buscar usuario por email
+      const user = await usersCollection.findOne({ email: email.toLowerCase() })
+      if (!user) {
+        throw new Error('Credenciales inválidas')
       }
-    )
 
-    await client.close()
+      // Verificar contraseña
+      const isPasswordValid = await bcrypt.compare(password, user.password)
+      if (!isPasswordValid) {
+        throw new Error('Credenciales inválidas')
+      }
+
+      // Contar mascotas del usuario
+      const userPetsCollection = db.collection('user_pets')
+      const petCount = await userPetsCollection.countDocuments({ userId: user._id.toString() })
+
+      // Actualizar petCount en usuario
+      await usersCollection.updateOne(
+        { _id: user._id },
+        { 
+          $set: { 
+            petCount,
+            lastLogin: new Date(),
+            updatedAt: new Date()
+          }
+        }
+      )
+
+      return { user, petCount }
+    })
 
     // Crear JWT token
     const token = jwt.sign(
       { 
-        userId: user._id.toString(),
-        email: user.email,
-        name: user.name
+        userId: result.user._id.toString(),
+        email: result.user.email,
+        name: result.user.name
       },
       JWT_SECRET,
       { expiresIn: '7d' }
@@ -76,10 +65,10 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       message: 'Login exitoso',
       user: {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        petCount
+        id: result.user._id.toString(),
+        name: result.user.name,
+        email: result.user.email,
+        petCount: result.petCount
       }
     }, { status: 200 })
 
@@ -94,8 +83,16 @@ export async function POST(request: NextRequest) {
 
     return response
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error en login:', error)
+    
+    if (error.message === 'Credenciales inválidas') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }

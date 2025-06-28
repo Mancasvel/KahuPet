@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { MongoClient } from 'mongodb'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-
-const uri = process.env.MONGODB_URI || "mongodb+srv://manuel:1234@cluster0.jt4ra.mongodb.net/"
+import { withPawsitiveDB } from '@/lib/mongodb'
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,38 +31,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const client = new MongoClient(uri)
-    await client.connect()
-    
-    const db = client.db('Kahupet')
-    const usersCollection = db.collection('users')
+    const result = await withPawsitiveDB(async (db) => {
+      const usersCollection = db.collection('users')
 
-    // Verificar si el usuario ya existe
-    const existingUser = await usersCollection.findOne({ email: email.toLowerCase() })
-    if (existingUser) {
-      await client.close()
-      return NextResponse.json(
-        { error: 'El email ya está registrado' },
-        { status: 409 }
-      )
-    }
+      // Verificar si el usuario ya existe
+      const existingUser = await usersCollection.findOne({ email: email.toLowerCase() })
+      if (existingUser) {
+        throw new Error('El email ya está registrado')
+      }
 
-    // Hash de la contraseña
-    const saltRounds = 12
-    const hashedPassword = await bcrypt.hash(password, saltRounds)
+      // Hash de la contraseña
+      const saltRounds = 12
+      const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Crear usuario
-    const newUser = {
-      name,
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      petCount: 0
-    }
+      // Crear usuario
+      const newUser = {
+        name,
+        email: email.toLowerCase(),
+        password: hashedPassword,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        petCount: 0
+      }
 
-    const result = await usersCollection.insertOne(newUser)
-    await client.close()
+      const insertResult = await usersCollection.insertOne(newUser)
+      return insertResult
+    })
 
     // Crear JWT token para login automático
     const token = jwt.sign(
@@ -73,7 +65,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase(),
         name
       },
-              process.env.JWT_SECRET || "kahupet-secret-key-2024",
+      process.env.JWT_SECRET || "kahupet-secret-key-2024",
       { expiresIn: '7d' }
     )
 
@@ -99,8 +91,16 @@ export async function POST(request: NextRequest) {
 
     return response
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error registrando usuario:', error)
+    
+    if (error.message === 'El email ya está registrado') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 409 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Error interno del servidor' },
       { status: 500 }
