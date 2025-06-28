@@ -92,6 +92,71 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const petId = searchParams.get('petId')
+    const petData = await request.json()
+
+    if (!petId) {
+      return NextResponse.json({ error: 'Pet ID is required' }, { status: 400 })
+    }
+
+    if (!client) {
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
+    }
+
+    // Validar datos requeridos
+    if (!petData.name || !petData.type || !petData.breed) {
+      return NextResponse.json({ 
+        error: 'Name, type, and breed are required' 
+      }, { status: 400 })
+    }
+
+    await client.connect()
+    const db = client.db('Pawsitive')
+    const collection = db.collection('user_pets')
+
+    // Actualizar la mascota
+    const updateData = {
+      name: petData.name,
+      type: petData.type,
+      breed: petData.breed,
+      age: petData.age || null,
+      weight: petData.weight || null,
+      gender: petData.gender || null,
+      isNeutered: petData.isNeutered || false,
+      activityLevel: petData.activityLevel || 'moderado',
+      healthIssues: petData.healthIssues || [],
+      specialDiet: petData.specialDiet || false,
+      dietRestrictions: petData.dietRestrictions || [],
+      behaviorIssues: petData.behaviorIssues || [],
+      notes: petData.notes || '',
+      updatedAt: new Date()
+    }
+
+    const result = await collection.updateOne(
+      { _id: new ObjectId(petId) },
+      { $set: updateData }
+    )
+
+    await client.close()
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ error: 'Pet not found' }, { status: 404 })
+    }
+
+    return NextResponse.json({ 
+      message: 'Pet updated successfully',
+      pet: { _id: petId, ...updateData }
+    })
+
+  } catch (error) {
+    console.error('Error updating pet:', error)
+    return NextResponse.json({ error: 'Error updating pet' }, { status: 500 })
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

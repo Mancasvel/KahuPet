@@ -199,6 +199,39 @@ export default function Home() {
     loadUserPet()
   }
 
+  // Función para eliminar la mascota registrada
+  const handleDeletePet = async () => {
+    if (!userPet) return
+    
+    const confirmDelete = window.confirm(`¿Estás seguro de que quieres eliminar a ${userPet.name}? Esta acción no se puede deshacer.`)
+    
+    if (!confirmDelete) return
+    
+    try {
+      const response = await fetch(`/api/user-pets?petId=${userPet._id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setUserPet(null)
+        console.log('🗑️ Mascota eliminada exitosamente')
+        // También limpiar cualquier respuesta de voz previa
+        setPetVoiceResponse(null)
+        // Limpiar la consulta actual
+        setQuery('')
+        setSummary('')
+        setRecommendations([])
+        setPetProfiles(allPetProfiles)
+      } else {
+        console.error('Error eliminando mascota')
+        alert('Error al eliminar la mascota. Por favor intenta de nuevo.')
+      }
+    } catch (error) {
+      console.error('Error eliminando mascota:', error)
+      alert('Error al eliminar la mascota. Por favor intenta de nuevo.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navbar estilo Pawsitive */}
@@ -264,16 +297,49 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Botón de registro de mascota */}
+          {/* Sección de mascota registrada */}
           <div className="flex justify-center mb-8">
-            <Button
-              size="lg"
-              onClick={() => setShowRegistrationForm(true)}
-              className="bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold px-8 py-3 shadow-lg hover:shadow-xl transition-all"
-            >
-              <span className="text-xl mr-2">🐾</span>
-              {userPet ? `${userPet.name} registrado` : 'Registra tu mascota'}
-            </Button>
+            {userPet ? (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-green-200 max-w-md">
+                <div className="text-center">
+                  <div className="text-4xl mb-2">🐾</div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-1">
+                    {userPet.name}
+                  </h3>
+                  <p className="text-gray-600 mb-1">
+                    {userPet.breed} • {userPet.age} {userPet.age === 1 ? 'año' : 'años'}
+                  </p>
+                  <p className="text-gray-500 text-sm mb-4">
+                    {userPet.weight}kg • {userPet.gender === 'macho' ? 'Macho' : userPet.gender === 'hembra' ? 'Hembra' : ''}
+                  </p>
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      size="md"
+                      onClick={() => setShowRegistrationForm(true)}
+                      className="bg-blue-500 text-white font-medium px-4"
+                    >
+                      ✏️ Editar
+                    </Button>
+                    <Button
+                      size="md"
+                      onClick={handleDeletePet}
+                      className="bg-red-500 text-white font-medium px-4 hover:bg-red-600"
+                    >
+                      🗑️ Eliminar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Button
+                size="lg"
+                onClick={() => setShowRegistrationForm(true)}
+                className="bg-gradient-to-r from-green-500 to-blue-500 text-white font-semibold px-8 py-3 shadow-lg hover:shadow-xl transition-all"
+              >
+                <span className="text-xl mr-2">🐾</span>
+                Registra tu mascota
+              </Button>
+            )}
           </div>
         </div>
 
@@ -441,6 +507,7 @@ export default function Home() {
         isOpen={showRegistrationForm}
         onClose={() => setShowRegistrationForm(false)}
         onSuccess={handlePetRegistrationSuccess}
+        existingPet={userPet}
       />
     </div>
   )

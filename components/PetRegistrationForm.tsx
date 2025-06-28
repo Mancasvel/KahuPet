@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Modal, 
   ModalContent, 
@@ -18,9 +18,10 @@ interface PetRegistrationFormProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: (pet: any) => void
+  existingPet?: any // Para edición
 }
 
-export default function PetRegistrationForm({ isOpen, onClose, onSuccess }: PetRegistrationFormProps) {
+export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existingPet }: PetRegistrationFormProps) {
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -31,6 +32,32 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess }: PetR
     notes: ''
   })
   const [isLoading, setIsLoading] = useState(false)
+
+  // Pre-llenar el formulario si hay una mascota existente
+  useEffect(() => {
+    if (existingPet && isOpen) {
+      setFormData({
+        name: existingPet.name || '',
+        type: existingPet.type || '',
+        breed: existingPet.breed || '',
+        age: existingPet.age ? existingPet.age.toString() : '',
+        weight: existingPet.weight ? existingPet.weight.toString() : '',
+        gender: existingPet.gender || '',
+        notes: existingPet.notes || ''
+      })
+    } else if (!existingPet && isOpen) {
+      // Limpiar formulario para nuevo registro
+      setFormData({
+        name: '',
+        type: '',
+        breed: '',
+        age: '',
+        weight: '',
+        gender: '',
+        notes: ''
+      })
+    }
+  }, [existingPet, isOpen])
 
   const dogBreeds = ["Golden Retriever", "Border Collie", "Bulldog Francés", "Labrador", "Pastor Alemán", "Husky", "Beagle", "Poodle"]
   const catBreeds = ["Persa", "Maine Coon", "Siamés", "Ragdoll", "British Shorthair", "Bengalí", "Sphynx"]
@@ -50,32 +77,39 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess }: PetR
         userId: 'anonymous'
       }
 
-      const response = await fetch('/api/user-pets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(petData)
-      })
+      let response
+      let successMessage
+
+      if (existingPet) {
+        // Actualizar mascota existente
+        response = await fetch(`/api/user-pets?petId=${existingPet._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(petData)
+        })
+        successMessage = 'Mascota actualizada exitosamente'
+      } else {
+        // Crear nueva mascota
+        response = await fetch('/api/user-pets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(petData)
+        })
+        successMessage = 'Mascota registrada exitosamente'
+      }
 
       if (response.ok) {
         const result = await response.json()
-        onSuccess(result.pet)
+        onSuccess(existingPet ? { ...existingPet, ...petData } : result.pet)
         onClose()
-        setFormData({
-          name: '',
-          type: '',
-          breed: '',
-          age: '',
-          weight: '',
-          gender: '',
-          notes: ''
-        })
+        console.log(successMessage)
       } else {
         const error = await response.json()
         alert(`Error: ${error.error}`)
       }
     } catch (error) {
-      console.error('Error registrando mascota:', error)
-      alert('Error al registrar la mascota')
+      console.error('Error con la mascota:', error)
+      alert(existingPet ? 'Error al actualizar la mascota' : 'Error al registrar la mascota')
     } finally {
       setIsLoading(false)
     }
@@ -89,7 +123,9 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess }: PetR
         <ModalHeader>
           <div className="flex items-center gap-2">
             <span className="text-2xl">🐾</span>
-            <h2 className="text-xl font-bold text-blue-600">Registra tu mascota</h2>
+            <h2 className="text-xl font-bold text-blue-600">
+              {existingPet ? 'Editar mascota' : 'Registra tu mascota'}
+            </h2>
           </div>
         </ModalHeader>
         
@@ -178,7 +214,7 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess }: PetR
             isLoading={isLoading}
             isDisabled={!formData.name || !formData.type || !formData.breed}
           >
-            Registrar mascota
+            {existingPet ? 'Actualizar mascota' : 'Registrar mascota'}
           </Button>
         </ModalFooter>
       </ModalContent>
