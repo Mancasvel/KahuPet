@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const client = new MongoClient(uri)
     await client.connect()
     
-    const db = client.db('Pawsitive')
+    const db = client.db('Kahupet')
     const usersCollection = db.collection('users')
     const userPetsCollection = db.collection('user_pets')
 
@@ -42,7 +42,8 @@ export async function GET(request: NextRequest) {
         id: currentUser.userId,
         name: user.name,
         email: user.email,
-        petCount
+        petCount,
+        interestedInPaying: user.interestedInPaying || 0
       }
     }, { status: 200 })
 

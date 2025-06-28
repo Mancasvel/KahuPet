@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 const uri = process.env.MONGODB_URI || "mongodb+srv://manuel:1234@cluster0.jt4ra.mongodb.net/"
-const JWT_SECRET = process.env.JWT_SECRET || "pawsitive-secret-key-2024"
+const JWT_SECRET = process.env.JWT_SECRET || "kahupet-secret-key-2024"
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const client = new MongoClient(uri)
     await client.connect()
     
-    const db = client.db('Pawsitive')
+    const db = client.db('Kahupet')
     const usersCollection = db.collection('users')
 
     // Buscar usuario por email

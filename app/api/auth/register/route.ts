@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const client = new MongoClient(uri)
     await client.connect()
     
-    const db = client.db('Pawsitive')
+    const db = client.db('Kahupet')
     const usersCollection = db.collection('users')
 
     // Verificar si el usuario ya existe
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase(),
         name
       },
-      process.env.JWT_SECRET || "pawsitive-secret-key-2024",
+              process.env.JWT_SECRET || "kahupet-secret-key-2024",
       { expiresIn: '7d' }
     )
 

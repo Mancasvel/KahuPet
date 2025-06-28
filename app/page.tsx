@@ -64,6 +64,8 @@ export default function Home() {
   const [userPets, setUserPets] = useState<any[]>([])
   const [selectedPet, setSelectedPet] = useState<any>(null)
   const [editingPet, setEditingPet] = useState<any>(null) // Para distinguir entre crear y editar
+  const [interestedInPaying, setInterestedInPaying] = useState(false)
+  const [isMarkingInterest, setIsMarkingInterest] = useState(false)
 
   // Cargar todos los perfiles de mascotas al inicio
   const loadAllPetProfiles = useCallback(async () => {
@@ -136,7 +138,11 @@ export default function Home() {
   // Cargar mascotas cuando el usuario cambie
   useEffect(() => {
     loadUserPets()
-  }, [loadUserPets])
+    // También cargar el estado de interés en pagar
+    if (user) {
+      setInterestedInPaying(user.interestedInPaying === 1)
+    }
+  }, [loadUserPets, user])
 
   const searchPetCare = async () => {
     if (!query.trim()) {
@@ -275,6 +281,44 @@ export default function Home() {
     setEditingPet(null)
   }
 
+  // Función para marcar interés en pagar
+  const handleMarkInterest = async () => {
+    if (!user) {
+      alert('Debes iniciar sesión para marcar tu interés')
+      return
+    }
+
+    if (interestedInPaying) {
+      alert('¡Ya has marcado tu interés! Te contactaremos pronto.')
+      return
+    }
+
+    setIsMarkingInterest(true)
+    
+    try {
+      const response = await fetch('/api/user-interest', {
+        method: 'POST',
+        credentials: 'include'
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setInterestedInPaying(true)
+        alert(data.message || '¡Gracias por tu interés! Te contactaremos pronto.')
+        // Actualizar el usuario en el contexto
+        refreshUser()
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error marcando interés:', error)
+      alert('Error al marcar interés. Por favor intenta de nuevo.')
+    } finally {
+      setIsMarkingInterest(false)
+    }
+  }
+
   // Función para eliminar la mascota seleccionada
   const handleDeletePet = async () => {
     if (!selectedPet) return
@@ -329,6 +373,52 @@ export default function Home() {
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             Entiende a tu mascota - Te ayudo con recomendaciones personalizadas de entrenamiento, nutrición y bienestar
           </p>
+
+          {/* Botón de interés en versión Premium */}
+          {user && !interestedInPaying && (
+            <div className="mb-8">
+              <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-6 max-w-lg mx-auto">
+                <div className="text-center">
+                  <div className="text-3xl mb-3">⭐</div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    ¿Te gustaría la versión Premium?
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Acceso ilimitado, funciones avanzadas y soporte prioritario
+                  </p>
+                  <Button
+                    size="lg"
+                    onClick={handleMarkInterest}
+                    isLoading={isMarkingInterest}
+                    className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold px-8 py-4 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+                  >
+                    {isMarkingInterest ? (
+                      <Spinner size="sm" color="white" />
+                    ) : (
+                      <>
+                        <span className="mr-2">💎</span>
+                        ¡Sí, me interesa Premium!
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Mensaje de agradecimiento para usuarios interesados */}
+          {user && interestedInPaying && (
+            <div className="mb-8">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-4 max-w-lg mx-auto">
+                <div className="text-center">
+                  <div className="text-2xl mb-2">✅</div>
+                  <p className="text-green-800 font-semibold">
+                    ¡Gracias por tu interés en Premium! Te contactaremos pronto.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Barra de búsqueda principal */}
           <div className="max-w-2xl mx-auto mb-8">

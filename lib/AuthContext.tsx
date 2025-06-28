@@ -7,6 +7,7 @@ interface User {
   name: string
   email: string
   petCount: number
+  interestedInPaying?: number
 }
 
 interface AuthContextType {
