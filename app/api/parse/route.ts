@@ -47,15 +47,15 @@ export async function POST(request: NextRequest) {
     // Crear conversationId específico por mascota para evitar mezclar conversaciones
     let conversationId: { userId?: string; sessionId?: string }
     
-    if (userPet && userPet.nombre) {
-      // Cada mascota tiene su propia sesión de conversación
-      const petSuffix = `_pet_${userPet.nombre.toLowerCase().replace(/\s+/g, '_')}`
+    if (userPet && userPet._id) {
+      // Cada mascota tiene su propia sesión de conversación usando su ID único
+      const petSuffix = `_pet_${userPet._id}`
       
       if (finalUserId) {
-        // Usuario autenticado: userId + nombre de mascota
+        // Usuario autenticado: userId + ID de mascota
         conversationId = { userId: finalUserId + petSuffix }
       } else {
-        // Usuario anónimo: sessionId + nombre de mascota
+        // Usuario anónimo: sessionId + ID de mascota
         conversationId = { sessionId: finalSessionId + petSuffix }
       }
     } else {
@@ -64,11 +64,11 @@ export async function POST(request: NextRequest) {
     }
     
     console.log('🔍 Consulta recibida:', query)
-    console.log('🐾 Mascota del usuario:', userPet ? `${userPet.nombre} (${userPet.tipo} - ${userPet.raza})` : 'No registrada')
+    console.log('🐾 Mascota del usuario:', userPet ? `${userPet.nombre} (${userPet.tipo} - ${userPet.raza}) - ID: ${userPet._id}` : 'No registrada')
     console.log('👤 ID de conversación:', conversationId.userId ? `userId: ${conversationId.userId}` : `sessionId: ${conversationId.sessionId}`)
     
     if (userPet) {
-      console.log('🎯 Sesión específica para mascota:', userPet.nombre)
+      console.log('🎯 Sesión específica para mascota:', `${userPet.nombre} (ID: ${userPet._id})`)
     }
 
     // Recuperar historial de conversación desde MongoDB o usar el enviado (retrocompatibilidad)
