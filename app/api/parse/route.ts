@@ -44,11 +44,32 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const conversationId = { userId: finalUserId, sessionId: finalSessionId }
+    // Crear conversationId específico por mascota para evitar mezclar conversaciones
+    let conversationId: { userId?: string; sessionId?: string }
+    
+    if (userPet && userPet.nombre) {
+      // Cada mascota tiene su propia sesión de conversación
+      const petSuffix = `_pet_${userPet.nombre.toLowerCase().replace(/\s+/g, '_')}`
+      
+      if (finalUserId) {
+        // Usuario autenticado: userId + nombre de mascota
+        conversationId = { userId: finalUserId + petSuffix }
+      } else {
+        // Usuario anónimo: sessionId + nombre de mascota
+        conversationId = { sessionId: finalSessionId + petSuffix }
+      }
+    } else {
+      // Sin mascota específica: usar IDs originales
+      conversationId = { userId: finalUserId, sessionId: finalSessionId }
+    }
     
     console.log('🔍 Consulta recibida:', query)
     console.log('🐾 Mascota del usuario:', userPet ? `${userPet.nombre} (${userPet.tipo} - ${userPet.raza})` : 'No registrada')
-    console.log('👤 ID de conversación:', finalUserId ? `userId: ${finalUserId}` : `sessionId: ${finalSessionId}`)
+    console.log('👤 ID de conversación:', conversationId.userId ? `userId: ${conversationId.userId}` : `sessionId: ${conversationId.sessionId}`)
+    
+    if (userPet) {
+      console.log('🎯 Sesión específica para mascota:', userPet.nombre)
+    }
 
     // Recuperar historial de conversación desde MongoDB o usar el enviado (retrocompatibilidad)
     let mongoConversationHistory: ConversationMessage[] = []

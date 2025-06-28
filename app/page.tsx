@@ -293,6 +293,21 @@ export default function Home() {
     }
   }
 
+  // Detectar cambio de mascota y limpiar conversación si está activa
+  const previousSelectedPetRef = useRef(selectedPet)
+  useEffect(() => {
+    const previousPet = previousSelectedPetRef.current
+    
+    // Si hay una conversación activa y la mascota cambió, iniciar nueva conversación
+    if (conversationStarted && previousPet && selectedPet && 
+        previousPet._id !== selectedPet._id) {
+      console.log('🔄 Mascota cambió de', previousPet.nombre, 'a', selectedPet.nombre, '- Iniciando nueva conversación')
+      startNewConversation()
+    }
+    
+    previousSelectedPetRef.current = selectedPet
+  }, [selectedPet, conversationStarted])
+
   // Render conversation interface
   if (conversationStarted) {
     return (
