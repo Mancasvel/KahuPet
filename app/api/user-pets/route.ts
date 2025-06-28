@@ -1,31 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { MongoClient, ObjectId } from 'mongodb'
+import { getCurrentUser, requireAuth } from '@/lib/auth'
 
-const client = process.env.MONGODB_URI ? new MongoClient(process.env.MONGODB_URI, {
-  tlsAllowInvalidCertificates: true,
-  tlsAllowInvalidHostnames: true,
-}) : null
+const uri = process.env.MONGODB_URI || "mongodb+srv://manuel:1234@cluster0.jt4ra.mongodb.net/"
+const MAX_PETS_PER_USER = 5
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!client) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
+    const currentUser = getCurrentUser(request)
+    
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'No autenticado' },
+        { status: 401 }
+      )
     }
 
+    const userId = currentUser.userId
+
+    const client = new MongoClient(uri)
     await client.connect()
+    
     const db = client.db('Pawsitive')
     const collection = db.collection('user_pets')
 
-    // Si se especifica userId, devolver solo las mascotas de ese usuario
-    const filters: any = {}
-    if (userId) {
-      filters.userId = userId
-    }
-
-    const userPets = await collection.find(filters).toArray()
+    const userPets = await collection.find({ userId }).toArray()
     
     await client.close()
 
@@ -39,51 +38,61 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const petData = await request.json()
+    const currentUser = requireAuth(request)
+    const { nombre, tipo, raza, edad, peso, genero, notas } = await request.json()
 
-    if (!client) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
+    if (!nombre || !tipo || !raza) {
+      return NextResponse.json(
+        { error: 'Nombre, tipo y raza son requeridos' },
+        { status: 400 }
+      )
     }
 
-    // Validar datos requeridos
-    if (!petData.name || !petData.type || !petData.breed) {
-      return NextResponse.json({ 
-        error: 'Name, type, and breed are required' 
-      }, { status: 400 })
-    }
+    const userId = currentUser.userId
 
+    const client = new MongoClient(uri)
     await client.connect()
+    
     const db = client.db('Pawsitive')
     const collection = db.collection('user_pets')
 
-    // Crear el perfil de la mascota del usuario
-    const userPet = {
-      userId: petData.userId || 'anonymous', // Por ahora usamos anonymous si no hay usuario
-      name: petData.name,
-      type: petData.type, // 'perro' o 'gato'
-      breed: petData.breed,
-      age: petData.age || null,
-      weight: petData.weight || null,
-      gender: petData.gender || null,
-      isNeutered: petData.isNeutered || false,
-      activityLevel: petData.activityLevel || 'moderado', // bajo, moderado, alto
-      healthIssues: petData.healthIssues || [],
-      specialDiet: petData.specialDiet || false,
-      dietRestrictions: petData.dietRestrictions || [],
-      behaviorIssues: petData.behaviorIssues || [],
-      notes: petData.notes || '',
+    // Verificar límite de mascotas por usuario
+    const existingPetsCount = await collection.countDocuments({ userId })
+    if (existingPetsCount >= MAX_PETS_PER_USER) {
+      await client.close()
+      return NextResponse.json(
+        { error: `No puedes tener más de ${MAX_PETS_PER_USER} mascotas registradas` },
+        { status: 400 }
+      )
+    }
+
+    const newPet = {
+      userId,
+      nombre,
+      tipo,
+      raza,
+      edad: edad || null,
+      peso: peso || null,
+      genero: genero || null,
+      notas: notas || '',
       createdAt: new Date(),
       updatedAt: new Date()
     }
 
-    const result = await collection.insertOne(userPet)
-
+    const result = await collection.insertOne(newPet)
+    
     await client.close()
 
+    // Crear objeto de mascota con el _id generado
+    const createdPet = {
+      ...newPet,
+      _id: result.insertedId
+    }
+
     return NextResponse.json({ 
-      message: 'Pet registered successfully',
+      message: 'Mascota registrada exitosamente',
       petId: result.insertedId,
-      pet: userPet
+      pet: createdPet
     }, { status: 201 })
 
   } catch (error) {
@@ -94,44 +103,51 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const currentUser = requireAuth(request)
     const { searchParams } = new URL(request.url)
     const petId = searchParams.get('petId')
-    const petData = await request.json()
+    const { nombre, tipo, raza, edad, peso, genero, notas } = await request.json()
 
     if (!petId) {
-      return NextResponse.json({ error: 'Pet ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Pet ID es requerido' }, { status: 400 })
     }
 
-    if (!client) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
+    if (!nombre || !tipo || !raza) {
+      return NextResponse.json(
+        { error: 'Nombre, tipo y raza son requeridos' },
+        { status: 400 }
+      )
     }
 
-    // Validar datos requeridos
-    if (!petData.name || !petData.type || !petData.breed) {
-      return NextResponse.json({ 
-        error: 'Name, type, and breed are required' 
-      }, { status: 400 })
-    }
-
+    const client = new MongoClient(uri)
     await client.connect()
+    
     const db = client.db('Pawsitive')
     const collection = db.collection('user_pets')
 
-    // Actualizar la mascota
+    // Verificar que la mascota pertenece al usuario autenticado
+    const existingPet = await collection.findOne({ _id: new ObjectId(petId) })
+    if (!existingPet) {
+      await client.close()
+      return NextResponse.json({ error: 'Mascota no encontrada' }, { status: 404 })
+    }
+
+    if (existingPet.userId !== currentUser.userId) {
+      await client.close()
+      return NextResponse.json(
+        { error: 'No tienes permiso para editar esta mascota' },
+        { status: 403 }
+      )
+    }
+
     const updateData = {
-      name: petData.name,
-      type: petData.type,
-      breed: petData.breed,
-      age: petData.age || null,
-      weight: petData.weight || null,
-      gender: petData.gender || null,
-      isNeutered: petData.isNeutered || false,
-      activityLevel: petData.activityLevel || 'moderado',
-      healthIssues: petData.healthIssues || [],
-      specialDiet: petData.specialDiet || false,
-      dietRestrictions: petData.dietRestrictions || [],
-      behaviorIssues: petData.behaviorIssues || [],
-      notes: petData.notes || '',
+      nombre,
+      tipo,
+      raza,
+      edad: edad || null,
+      peso: peso || null,
+      genero: genero || null,
+      notas: notas || '',
       updatedAt: new Date()
     }
 
@@ -143,12 +159,12 @@ export async function PUT(request: NextRequest) {
     await client.close()
 
     if (result.matchedCount === 0) {
-      return NextResponse.json({ error: 'Pet not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Mascota no encontrada' }, { status: 404 })
     }
 
     return NextResponse.json({ 
-      message: 'Pet updated successfully',
-      pet: { _id: petId, ...updateData }
+      message: 'Mascota actualizada exitosamente',
+      pet: { _id: petId, userId: currentUser.userId, ...updateData }
     })
 
   } catch (error) {
@@ -159,30 +175,47 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const currentUser = requireAuth(request)
     const { searchParams } = new URL(request.url)
     const petId = searchParams.get('petId')
 
     if (!petId) {
-      return NextResponse.json({ error: 'Pet ID is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Pet ID es requerido' }, { status: 400 })
     }
 
-    if (!client) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 })
-    }
-
+    const client = new MongoClient(uri)
     await client.connect()
+    
     const db = client.db('Pawsitive')
     const collection = db.collection('user_pets')
+
+    // Verificar que la mascota pertenece al usuario autenticado
+    const pet = await collection.findOne({ _id: new ObjectId(petId) })
+    if (!pet) {
+      await client.close()
+      return NextResponse.json(
+        { error: 'Mascota no encontrada' },
+        { status: 404 }
+      )
+    }
+
+    if (pet.userId !== currentUser.userId) {
+      await client.close()
+      return NextResponse.json(
+        { error: 'No tienes permiso para eliminar esta mascota' },
+        { status: 403 }
+      )
+    }
 
     const result = await collection.deleteOne({ _id: new ObjectId(petId) })
 
     await client.close()
 
     if (result.deletedCount === 0) {
-      return NextResponse.json({ error: 'Pet not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Mascota no encontrada' }, { status: 404 })
     }
 
-    return NextResponse.json({ message: 'Pet deleted successfully' })
+    return NextResponse.json({ message: 'Mascota eliminada exitosamente' })
 
   } catch (error) {
     console.error('Error deleting pet:', error)

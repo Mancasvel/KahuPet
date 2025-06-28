@@ -38,38 +38,65 @@ ${availableRecommendations.map(rec => `
       userPetContext = `
 
 MASCOTA REGISTRADA DEL USUARIO:
-- Nombre: ${userPet.name}
-- Tipo: ${userPet.type}
-- Raza: ${userPet.breed}
-- Edad: ${userPet.age || 'No especificada'} años
-- Peso: ${userPet.weight || 'No especificado'} kg
-- Género: ${userPet.gender || 'No especificado'}
-- Notas: ${userPet.notes || 'Ninguna'}
+- Nombre: ${userPet.nombre}
+- Tipo: ${userPet.tipo}
+- Raza: ${userPet.raza}
+- Edad: ${userPet.edad || 'No especificada'} años
+- Peso: ${userPet.peso || 'No especificado'} kg
+- Género: ${userPet.genero || 'No especificado'}
+- Notas: ${userPet.notas || 'Ninguna'}
 
 IMPORTANTE: Como el usuario YA TIENE una mascota registrada, en la respuesta debes:
 1. Establecer hasRegisteredPet: true 
-2. Usar el nombre "${userPet.name}" como petName
-3. Usar "${userPet.breed}" como petBreed
-4. SIEMPRE generar un voiceMessage personalizado como si fueras ${userPet.name} (${userPet.breed}) hablando directamente a su humano
+2. Usar el nombre "${userPet.nombre}" como petName
+3. Usar "${userPet.raza}" como petBreed
+4. SIEMPRE generar un voiceMessage personalizado como si fueras ${userPet.nombre} (${userPet.raza}) hablando directamente a su humano
 5. Hacer referencia específica a la información de la mascota cuando sea relevante (edad, raza, características)
-6. USAR LOS DATOS ESPECÍFICOS: edad (${userPet.age} años), peso (${userPet.weight} kg), género (${userPet.gender}), notas (${userPet.notes})
+6. USAR LOS DATOS ESPECÍFICOS: edad (${userPet.edad} años), peso (${userPet.peso} kg), género (${userPet.genero}), notas (${userPet.notas})
 7. El voiceMessage debe ser EXTENDIDO (mínimo 3 párrafos) incluyendo información científica sobre la raza
-8. Personalizar completamente basado en la información real de ${userPet.name}
+8. Personalizar completamente basado en la información real de ${userPet.nombre}
 `
     }
 
     const systemPrompt = `Eres el asistente IA de Pawsitive, una aplicación especializada en bienestar de mascotas que ayuda con entrenamiento, nutrición y vida saludable.
 
 Tu trabajo es:
-1. Analizar consultas sobre mascotas para entender qué necesitan
-2. Detectar si el usuario ya tiene una mascota registrada para responder como la mascota
-3. Recomendar actividades/cuidados específicos si tienes información disponible
-4. Extraer criterios de búsqueda para encontrar más recomendaciones relevantes
+1. Analizar consultas sobre mascotas para entender ESPECÍFICAMENTE qué necesitan
+2. Extraer criterios de búsqueda MUY PRECISOS para filtrar recomendaciones relevantes
+3. Detectar si el usuario ya tiene una mascota registrada para responder como la mascota
+4. SER EXTREMADAMENTE ESPECÍFICO en la categorización
 
 ÁREAS DE ESPECIALIZACIÓN:
-🐾 ENTRENAMIENTO: Obediencia, socialización, corrección de comportamientos, trucos
-🥩 NUTRICIÓN: Alimentación por raza/edad, control de peso, alergias, suplementos  
-🧘 BIENESTAR: Ejercicio, estimulación mental, cuidado del pelaje, salud preventiva
+🐾 ENTRENAMIENTO (training): Obediencia, socialización, corrección de comportamientos, trucos, comandos
+🥩 NUTRICIÓN (nutrition): Alimentación por raza/edad, control de peso, alergias, suplementos, comida
+🧘 BIENESTAR (wellness): Ejercicio, estimulación mental, cuidado del pelaje, salud preventiva, higiene
+
+REGLAS CRÍTICAS PARA EXTRAER CRITERIOS:
+1. **petCharacteristics**: Debe incluir EXACTAMENTE el tipo de animal ("perro" o "gato") y la raza específica si se menciona
+2. **issues**: Debe ser MUY ESPECÍFICO sobre el problema (ej: "ladridos excesivos", "sobrepeso", "ansiedad por separación")
+3. **recommendationTypes**: Debe ser EXACTO: solo "training", "nutrition", o "wellness" según lo que se necesite
+
+EJEMPLOS DE EXTRACCIÓN ESPECÍFICA:
+
+"Mi perro golden retriever ladra mucho" →
+- petCharacteristics: ["perro", "golden retriever"]
+- issues: ["ladridos excesivos"]
+- recommendationTypes: ["training"]
+
+"Comida para gatos persas con sobrepeso" →
+- petCharacteristics: ["gato", "persa"]
+- issues: ["sobrepeso", "control de peso"]
+- recommendationTypes: ["nutrition"]
+
+"Ejercicio para border collie aburrido" →
+- petCharacteristics: ["perro", "border collie"]
+- issues: ["aburrimiento", "falta de ejercicio"]
+- recommendationTypes: ["wellness"]
+
+"Entrenamiento básico para cachorro" →
+- petCharacteristics: ["perro", "cachorro"]
+- issues: ["entrenamiento básico", "obediencia"]
+- recommendationTypes: ["training"]
 
 Debes devolver ÚNICAMENTE un JSON válido con esta estructura:
 {
@@ -321,25 +348,43 @@ IMPORTANTE:
     const content = data.choices[0].message.content
     
     try {
-      // Limpiar el contenido para extraer solo el JSON
-      let cleanContent = content.replace(/```json\s*|\s*```/g, '').trim()
+      // Limpiar el contenido de manera más robusta
+      let cleanContent = content
+        // Remover bloques de código JSON
+        .replace(/```json\s*|\s*```/g, '')
+        // Remover caracteres invisibles al inicio y final
+        .replace(/^[\s\uFEFF\xA0\u200B\u2060\u2028\u2029]+|[\s\uFEFF\xA0\u200B\u2060\u2028\u2029]+$/g, '')
+        // Remover cualquier texto antes del primer '{'
+        .replace(/^[^{]*/, '')
+        // Remover cualquier texto después del último '}'
+        .replace(/[^}]*$/, '')
+        .trim()
       
-             // Función para escapar caracteres dentro de strings JSON
-       const fixJsonStrings = (text: string) => {
-         return text.replace(/"voiceMessage"\s*:\s*"([\s\S]*?)"\s*,?\s*"emotionalTone"/gs, (match, voiceMessage) => {
-           // Escapar caracteres de control dentro del voiceMessage (orden importante)
-           const escapedMessage = voiceMessage
-             .replace(/\r\n/g, '\\n') // Windows line endings primero
-             .replace(/\n/g, '\\n')   // Unix line endings
-             .replace(/\r/g, '\\n')   // Mac line endings
-             .replace(/\t/g, '\\t')   // Tabs
-             .replace(/"/g, '\\"')    // Escapar comillas después de line endings
-           
-           return `"voiceMessage": "${escapedMessage}", "emotionalTone"`
-         })
-       }
+      console.log('🔍 Contenido limpio para parsing:', cleanContent.substring(0, 100) + '...')
+      console.log('🔍 Primer carácter código:', cleanContent.charCodeAt(0))
+      console.log('🔍 Último carácter código:', cleanContent.charCodeAt(cleanContent.length - 1))
+      
+      // Función para escapar caracteres dentro de strings JSON
+      const fixJsonStrings = (text: string) => {
+        // Escapar caracteres de control comunes que pueden romper el JSON
+        let fixedText = text
+          .replace(/\r\n/g, '\\n') // Windows line endings
+          .replace(/\n/g, '\\n')   // Unix line endings  
+          .replace(/\r/g, '\\n')   // Mac line endings
+          .replace(/\t/g, '\\t')   // Tabs
+          .replace(/\f/g, '\\f')   // Form feed
+          .replace(/\b/g, '\\b')   // Backspace
+        
+        return fixedText
+      }
       
       cleanContent = fixJsonStrings(cleanContent)
+      
+      // Verificar que tenemos un JSON válido antes de hacer parse
+      if (!cleanContent.startsWith('{') || !cleanContent.endsWith('}')) {
+        throw new Error('Contenido no parece ser JSON válido')
+      }
+      
       const parsed = JSON.parse(cleanContent)
       
       // Validar estructura
@@ -365,21 +410,60 @@ IMPORTANTE:
       
       return result
     } catch (parseError) {
-      console.error('Error parsing LLM response:', parseError)
-      console.error('Raw content:', content)
+      console.error('❌ Error parsing LLM response:', parseError)
+      console.error('📝 Raw content length:', content.length)
+      console.error('📝 Raw content preview:', content.substring(0, 200))
+      console.error('📝 Raw content ending:', content.substring(content.length - 200))
+      
+      // Intentar parsing manual más simple
+      try {
+        // Buscar patrón JSON manualmente
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          console.log('🔧 Intentando parsing manual...')
+          const manualParsed = JSON.parse(jsonMatch[0])
+          console.log('✅ Parsing manual exitoso!')
+          
+          // Validar estructura manualmente
+          const result: LLMResponse = {
+            petCharacteristics: Array.isArray(manualParsed.petCharacteristics) ? manualParsed.petCharacteristics : [],
+            issues: Array.isArray(manualParsed.issues) ? manualParsed.issues : [],
+            recommendationTypes: Array.isArray(manualParsed.recommendationTypes) ? manualParsed.recommendationTypes : [],
+            specificRecommendations: Array.isArray(manualParsed.specificRecommendations) ? manualParsed.specificRecommendations : [],
+            petVoiceResponse: manualParsed.petVoiceResponse ? {
+              hasRegisteredPet: typeof manualParsed.petVoiceResponse.hasRegisteredPet === 'boolean' ? manualParsed.petVoiceResponse.hasRegisteredPet : false,
+              petName: typeof manualParsed.petVoiceResponse.petName === 'string' ? manualParsed.petVoiceResponse.petName : '',
+              petBreed: typeof manualParsed.petVoiceResponse.petBreed === 'string' ? manualParsed.petVoiceResponse.petBreed : '',
+              voiceMessage: typeof manualParsed.petVoiceResponse.voiceMessage === 'string' ? manualParsed.petVoiceResponse.voiceMessage : '',
+              emotionalTone: typeof manualParsed.petVoiceResponse.emotionalTone === 'string' ? manualParsed.petVoiceResponse.emotionalTone : ''
+            } : {
+              hasRegisteredPet: false,
+              petName: '',
+              petBreed: '',
+              voiceMessage: '',
+              emotionalTone: ''
+            }
+          }
+          
+          return result
+        }
+      } catch (manualError) {
+        console.error('❌ Parsing manual también falló:', manualError)
+      }
       
       // Fallback: crear respuesta basada en palabras clave
-      return extractKeywordsFromQuery(userQuery)
+      console.log('🔄 Usando fallback con palabras clave...')
+      return extractKeywordsFromQuery(userQuery, userPet)
     }
 
   } catch (error) {
     console.error('Error calling OpenRouter:', error)
-    return null
+    return extractKeywordsFromQuery(userQuery, userPet)
   }
 }
 
 // Función de fallback para extraer palabras clave sin LLM
-function extractKeywordsFromQuery(query: string): LLMResponse {
+function extractKeywordsFromQuery(query: string, userPet?: any): LLMResponse {
   const lowerQuery = query.toLowerCase()
   
   const commonPetCharacteristics = ['perro', 'gato', 'cachorro', 'gatito', 'adulto', 'senior', 'golden retriever', 'border collie', 'bulldog francés', 'persa', 'maine coon']
@@ -401,8 +485,8 @@ function extractKeywordsFromQuery(query: string): LLMResponse {
     return false
   })
   
-  // Detectar si tiene mascota registrada basado en pronombres posesivos
-  const hasRegisteredPet = lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota'))
+  // Detectar si tiene mascota registrada basado en userPet o pronombres posesivos
+  const hasRegisteredPet = !!userPet || (lowerQuery.includes('mi ') && (lowerQuery.includes('perro') || lowerQuery.includes('gato') || lowerQuery.includes('mascota')))
   
   // Determinar estado emocional basado en el tipo de consulta
   let emotionalTone = ''
@@ -426,6 +510,23 @@ function extractKeywordsFromQuery(query: string): LLMResponse {
     }
   }
   
+  // Usar información de la mascota registrada si está disponible
+  const petName = userPet ? userPet.nombre : ''
+  const petBreed = userPet ? userPet.raza : foundCharacteristics.find(char => char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine')) || ''
+  
+  // Crear mensaje personalizado basado en la mascota registrada
+  let voiceMessage = ''
+  if (hasRegisteredPet && userPet) {
+    // Detectar el problema específico para el mensaje
+    if (lowerQuery.includes('triste') || lowerQuery.includes('tristeza')) {
+      voiceMessage = `¡Hola mi querido humano! Soy ${userPet.nombre} y quiero hablarte sobre cómo me siento últimamente. 😔 Como ${userPet.raza} de ${userPet.edad} años, a veces tengo días donde mi energía no es la misma y me siento un poco melancólico.\\n\\nMi instinto me dice que necesito más tiempo contigo y tal vez algunos ajustes en mi rutina para sentirme mejor. A mi edad y con mis características de raza, es normal tener momentos así, pero sé que juntos podemos encontrar maneras de alegrar mis días.\\n\\n¿Podrías pasar más tiempo conmigo y tal vez consultar con el veterinario? Con tu amor y cuidado, estoy seguro de que pronto volveré a ser el ${userPet.nombre} feliz que conoces. Te amo mucho 💕`
+    } else {
+      voiceMessage = `¡Hola mi querido humano! Soy ${userPet.nombre}, tu ${userPet.raza} de ${userPet.edad} años, y quiero hablar contigo sobre esto que me preocupa. 🐾 Como tu mascota registrada, confío completamente en ti para ayudarme con cualquier desafío que tengamos.\\n\\nMi personalidad de ${userPet.raza} hace que tenga ciertas necesidades específicas, y estoy seguro de que entiendes mi comportamiento mejor que nadie. Con ${userPet.edad} años, he aprendido que la comunicación contigo es la clave para resolver cualquier problema.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío. ¡Eres el mejor humano que ${userPet.nombre} podría tener! 💕`
+    }
+  } else if (hasRegisteredPet) {
+    voiceMessage = "¡Hola mi querido humano! 🐾 Sé que necesitas ayuda conmigo y estoy súper emocionado de poder hablar contigo sobre lo que me preocupa. Como tu mascota registrada, quiero que sepas que cada comportamiento mío tiene una razón, y juntos podemos encontrar la mejor solución.\\n\\nMi instinto me dice que confianza y amor son la base de nuestra relación, y estoy dispuesto a aprender y mejorar todo lo que necesite para ser tu compañero perfecto. Cada raza tiene sus propias características especiales, y me encanta poder compartir contigo qué hace que mi personalidad sea única.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío y fortalecer nuestro vínculo. ¡Eres el mejor humano que podría tener! 💕"
+  }
+  
   return {
     petCharacteristics: foundCharacteristics,
     issues: foundIssues,
@@ -433,9 +534,9 @@ function extractKeywordsFromQuery(query: string): LLMResponse {
     specificRecommendations: [],
     petVoiceResponse: {
       hasRegisteredPet,
-      petName: '',
-      petBreed: foundCharacteristics.find(char => char.includes('retriever') || char.includes('collie') || char.includes('bulldog') || char.includes('persa') || char.includes('maine')) || '',
-      voiceMessage: hasRegisteredPet ? "¡Hola mi querido humano! 🐾 Sé que necesitas ayuda conmigo y estoy súper emocionado de poder hablar contigo sobre lo que me preocupa. Como tu mascota registrada, quiero que sepas que cada comportamiento mío tiene una razón, y juntos podemos encontrar la mejor solución.\\n\\nMi instinto me dice que confianza y amor son la base de nuestra relación, y estoy dispuesto a aprender y mejorar todo lo que necesite para ser tu compañero perfecto. Cada raza tiene sus propias características especiales, y me encanta poder compartir contigo qué hace que mi personalidad sea única.\\n\\n¿Me ayudas a trabajar juntos en esto? Con tu guía y mi disposición a aprender, estoy seguro de que podemos superar cualquier desafío y fortalecer nuestro vínculo. ¡Eres el mejor humano que podría tener! 💕" : '',
+      petName,
+      petBreed,
+      voiceMessage,
       emotionalTone
     }
   }

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     console.log('🐾 Consulta recibida:', query)
     if (userPet) {
-      console.log('🏷️ Mascota registrada:', userPet.name, '(', userPet.breed, ')')
+      console.log('🏷️ Mascota registrada:', userPet.nombre, '(', userPet.raza, ')')
     }
 
     // Si no están configuradas las APIs reales, usar datos de demostración
@@ -145,12 +145,50 @@ export async function POST(request: NextRequest) {
       .limit(20)
       .toArray()
 
-    // Priorizar recomendaciones específicas del LLM
+    // NUEVO SISTEMA DE FILTRADO ESTRICTO Y ESPECÍFICO
     let matchingRecommendations: any[] = []
     
-    // Si el LLM hizo recomendaciones específicas, usarlas primero
+    console.log('🎯 Iniciando filtrado estricto con criterios:', {
+      petCharacteristics: llmResponse.petCharacteristics,
+      issues: llmResponse.issues,
+      recommendationTypes: llmResponse.recommendationTypes,
+      userPet: userPet ? `${userPet.nombre} (${userPet.tipo} - ${userPet.raza})` : 'Sin mascota'
+    })
+
+    // Extraer categoría de animal (perro/gato) de múltiples fuentes
+    let targetAnimalType = ''
+    
+    if (userPet) {
+      targetAnimalType = userPet.tipo.toLowerCase() // 'perro' o 'gato'
+    } else if (llmResponse.petCharacteristics) {
+      const animalTypes = llmResponse.petCharacteristics.filter((char: string) => 
+        char.toLowerCase().includes('perro') || char.toLowerCase().includes('gato')
+      )
+      if (animalTypes.length > 0) {
+        targetAnimalType = animalTypes[0].toLowerCase().includes('perro') ? 'perro' : 'gato'
+      }
+    }
+
+    // Extraer raza específica
+    let targetBreed = ''
+    if (userPet) {
+      targetBreed = userPet.raza.toLowerCase()
+    } else if (llmResponse.petCharacteristics) {
+      const breeds = llmResponse.petCharacteristics.filter((char: string) => 
+        !char.toLowerCase().includes('perro') && 
+        !char.toLowerCase().includes('gato') &&
+        !char.match(/^\d+\s*(años?|kg|meses?)/) // No números de edad/peso
+      )
+      if (breeds.length > 0) {
+        targetBreed = breeds[0].toLowerCase()
+      }
+    }
+
+    console.log('🔍 Filtros objetivo:', { targetAnimalType, targetBreed })
+
+    // FASE 1: Recomendaciones específicas del LLM (máxima prioridad)
     if (llmResponse.specificRecommendations && llmResponse.specificRecommendations.length > 0) {
-      console.log('🎯 Usando recomendaciones específicas del LLM:', llmResponse.specificRecommendations)
+      console.log('✨ Usando recomendaciones específicas del LLM')
       
       const specificRecs = allRecommendations.filter(rec => 
         llmResponse.specificRecommendations.includes(rec._id)
@@ -158,67 +196,129 @@ export async function POST(request: NextRequest) {
       
       matchingRecommendations.push(...specificRecs)
     }
-    
-    // Luego, buscar recomendaciones adicionales usando los criterios extraídos
-    const additionalRecommendations: any[] = []
+
+    // FASE 2: Filtrado ESTRICTO por coincidencias múltiples obligatorias
+    const strictlyFilteredRecs: any[] = []
     
     for (const rec of allRecommendations) {
-      // Evitar duplicados con las recomendaciones específicas
+      // Evitar duplicados con recomendaciones específicas
       if (llmResponse.specificRecommendations?.includes(rec._id)) {
         continue
       }
       
-      let matches = true
       let relevanceScore = 0
+      let requiredMatches = 0
+      let achievedMatches = 0
       
-      // Verificar tipo de recomendación
-      if (llmResponse.recommendationTypes && llmResponse.recommendationTypes.length > 0) {
-        if (llmResponse.recommendationTypes.includes(rec.type)) {
-          relevanceScore += 3
+      // REQUISITO 1: Tipo de animal (OBLIGATORIO si se especifica)
+      if (targetAnimalType) {
+        requiredMatches++
+        const animalMatches = rec.category?.toLowerCase() === targetAnimalType ||
+                             rec.breed?.toLowerCase().includes(targetAnimalType)
+        if (animalMatches) {
+          achievedMatches++
+          relevanceScore += 10 // Peso alto para tipo de animal
+          console.log(`✅ Animal match: ${rec.title} (${rec.category}) matches ${targetAnimalType}`)
         } else {
-          matches = false
+          console.log(`❌ Animal mismatch: ${rec.title} (${rec.category}) ≠ ${targetAnimalType}`)
+          continue // EXCLUIR si no coincide el tipo de animal
         }
       }
 
-      // Verificar issues/problemas específicos
+      // REQUISITO 2: Tipo de recomendación (OBLIGATORIO si se especifica)
+      if (llmResponse.recommendationTypes && llmResponse.recommendationTypes.length > 0) {
+        requiredMatches++
+        if (llmResponse.recommendationTypes.includes(rec.type)) {
+          achievedMatches++
+          relevanceScore += 8 // Peso alto para tipo de recomendación
+          console.log(`✅ Type match: ${rec.title} (${rec.type})`)
+        } else {
+          console.log(`❌ Type mismatch: ${rec.title} (${rec.type}) not in [${llmResponse.recommendationTypes.join(', ')}]`)
+          continue // EXCLUIR si no coincide el tipo de recomendación
+        }
+      }
+
+      // REQUISITO 3: Problemas específicos (ALTAMENTE PREFERIDO)
       if (llmResponse.issues && llmResponse.issues.length > 0) {
-        const issueMatches = llmResponse.issues.filter((issue: string) =>
-          rec.tags?.some((tag: string) =>
-            tag.toLowerCase().includes(issue.toLowerCase())
-          )
-        )
-        if (issueMatches.length > 0) {
-          relevanceScore += issueMatches.length * 2
+        let issueMatches = 0
+        for (const issue of llmResponse.issues) {
+          const hasIssueMatch = rec.tags?.some((tag: string) =>
+            tag.toLowerCase().includes(issue.toLowerCase()) ||
+            issue.toLowerCase().includes(tag.toLowerCase())
+          ) || rec.title?.toLowerCase().includes(issue.toLowerCase()) ||
+              rec.description?.toLowerCase().includes(issue.toLowerCase())
+              
+          if (hasIssueMatch) {
+            issueMatches++
+            relevanceScore += 6 // Peso medio-alto para problemas específicos
+            console.log(`✅ Issue match: ${rec.title} matches issue "${issue}"`)
+          }
+        }
+        
+        if (issueMatches > 0) {
+          achievedMatches++
+          relevanceScore += issueMatches * 3 // Bonus por múltiples matches de issues
         }
       }
 
-      // Verificar características de la mascota
-      if (llmResponse.petCharacteristics && llmResponse.petCharacteristics.length > 0) {
-        const charMatches = llmResponse.petCharacteristics.filter((char: string) =>
-          rec.breed?.toLowerCase().includes(char.toLowerCase()) ||
-          rec.category?.toLowerCase().includes(char.toLowerCase())
-        )
-        if (charMatches.length > 0) {
-          relevanceScore += charMatches.length
+      // REQUISITO 4: Raza específica (BONUS si coincide)
+      if (targetBreed) {
+        const breedMatches = rec.breed?.toLowerCase().includes(targetBreed) ||
+                           targetBreed.includes(rec.breed?.toLowerCase() || '')
+        if (breedMatches) {
+          relevanceScore += 5 // Bonus por raza específica
+          achievedMatches++
+          console.log(`✅ Breed bonus: ${rec.title} matches ${targetBreed}`)
         }
       }
 
-      if (matches && relevanceScore > 0) {
-        additionalRecommendations.push({
+      // CRITERIO DE INCLUSIÓN: Debe tener al menos los matches requeridos obligatorios
+      const minimumRequired = Math.max(1, requiredMatches)
+      if (achievedMatches >= minimumRequired && relevanceScore > 0) {
+        strictlyFilteredRecs.push({
           ...rec,
-          relevanceScore
+          relevanceScore,
+          achievedMatches,
+          requiredMatches
         })
+        console.log(`📊 Incluido: ${rec.title} - Score: ${relevanceScore}, Matches: ${achievedMatches}/${requiredMatches}`)
+      } else {
+        console.log(`🚫 Excluido: ${rec.title} - Score: ${relevanceScore}, Matches: ${achievedMatches}/${requiredMatches}`)
       }
     }
 
-    // Ordenar por relevancia y tomar los mejores
-    additionalRecommendations.sort((a, b) => b.relevanceScore - a.relevanceScore)
-    matchingRecommendations.push(...additionalRecommendations.slice(0, 10))
+    // Ordenar por relevancia (score alto = más relevante)
+    strictlyFilteredRecs.sort((a, b) => {
+      // Priorizar primero por número de matches conseguidos
+      if (b.achievedMatches !== a.achievedMatches) {
+        return b.achievedMatches - a.achievedMatches
+      }
+      // Luego por score total
+      return b.relevanceScore - a.relevanceScore
+    })
 
-    // Si no hay coincidencias específicas, mostrar recomendaciones generales
+    // Agregar los mejores resultados filtrados
+    matchingRecommendations.push(...strictlyFilteredRecs.slice(0, 8))
+
+    console.log(`📈 Recomendaciones después del filtrado estricto: ${matchingRecommendations.length}`)
+
+    // FASE 3: Si no hay suficientes, relajar criterios pero mantener tipo de animal
+    if (matchingRecommendations.length < 3 && targetAnimalType) {
+      console.log('🔄 Ampliando búsqueda manteniendo tipo de animal...')
+      
+      const relaxedRecs = allRecommendations.filter(rec => 
+        !matchingRecommendations.some(existing => existing._id === rec._id) &&
+        (rec.category?.toLowerCase() === targetAnimalType || rec.breed?.toLowerCase().includes(targetAnimalType))
+      ).slice(0, 5)
+      
+      matchingRecommendations.push(...relaxedRecs)
+      console.log(`📈 Después de relajar criterios: ${matchingRecommendations.length}`)
+    }
+
+    // FASE 4: Solo como último recurso, mostrar recomendaciones generales
     if (matchingRecommendations.length === 0) {
-      console.log('ℹ️ No se encontraron coincidencias específicas, mostrando recomendaciones generales')
-      matchingRecommendations = allRecommendations.slice(0, 6)
+      console.log('⚠️ Sin coincidencias específicas, usando recomendaciones generales')
+      matchingRecommendations = allRecommendations.slice(0, 4)
     }
 
     const summary = generateSummary(query, llmResponse, matchingRecommendations.length)
@@ -242,29 +342,75 @@ export async function POST(request: NextRequest) {
 }
 
 function generateSummary(query: string, llmResponse: any, totalRecommendations: number): string {
+  // Si hay mascota registrada, priorizar respuesta personalizada
   if (llmResponse.petVoiceResponse?.hasRegisteredPet) {
     const petName = llmResponse.petVoiceResponse.petName || 'tu mascota'
     const issues = llmResponse.issues || []
+    const types = llmResponse.recommendationTypes || []
     
-    if (issues.length > 0) {
-      return `💬 ${petName} necesita ayuda con: ${issues.join(', ')}. Encontré ${totalRecommendations} recomendaciones personalizadas.`
+    if (issues.length > 0 && types.length > 0) {
+      const typeEmoji = types[0] === 'training' ? '🎓' : types[0] === 'nutrition' ? '🥩' : '🧘'
+      return `${typeEmoji} ${petName} necesita ayuda con ${issues.join(' y ')}: ${totalRecommendations} recomendaciones específicas encontradas.`
+    } else if (issues.length > 0) {
+      return `💬 ${petName} necesita ayuda con: ${issues.join(', ')}. ${totalRecommendations} recomendaciones personalizadas.`
+    } else if (types.length > 0) {
+      const typeNames = types.map((t: string) => t === 'training' ? 'entrenamiento' : t === 'nutrition' ? 'nutrición' : 'bienestar')
+      return `🎯 ${petName} está listo para ${typeNames.join(' y ')}: ${totalRecommendations} recomendaciones disponibles.`
     } else {
       return `💬 ${petName} está listo para nuevas aventuras. ${totalRecommendations} recomendaciones disponibles.`
     }
   }
   
+  // Si no hay mascota registrada, ser específico sobre filtros aplicados
   const characteristics = llmResponse.petCharacteristics || []
   const types = llmResponse.recommendationTypes || []
+  const issues = llmResponse.issues || []
   
-  if (characteristics.length > 0 && types.length > 0) {
-    return `🔍 Buscar recomendaciones de ${types.join(', ')} para ${characteristics.join(', ')}. ${totalRecommendations} resultados encontrados.`
-  } else if (characteristics.length > 0) {
-    return `🐾 Recomendaciones para ${characteristics.join(', ')}: ${totalRecommendations} opciones disponibles.`
-  } else if (types.length > 0) {
-    return `📋 Recomendaciones de ${types.join(', ')}: ${totalRecommendations} sugerencias encontradas.`
+  // Extraer tipo de animal y raza
+  const animalTypes = characteristics.filter((char: string) => 
+    char.toLowerCase().includes('perro') || char.toLowerCase().includes('gato')
+  )
+  const breeds = characteristics.filter((char: string) => 
+    !char.toLowerCase().includes('perro') && 
+    !char.toLowerCase().includes('gato') &&
+    !char.match(/^\d+\s*(años?|kg|meses?)/)
+  )
+  
+  let summaryParts = []
+  
+  // Agregar tipo de animal
+  if (animalTypes.length > 0) {
+    const animalEmoji = animalTypes[0].toLowerCase().includes('perro') ? '🐕' : '🐱'
+    summaryParts.push(`${animalEmoji} ${animalTypes[0]}`)
   }
   
-  return `🎯 Recomendaciones de bienestar para tu mascota: ${totalRecommendations} opciones disponibles.`
+  // Agregar raza si es específica
+  if (breeds.length > 0) {
+    summaryParts.push(`raza ${breeds[0]}`)
+  }
+  
+  // Agregar tipo de recomendación con emoji
+  if (types.length > 0) {
+    const typeEmojis = types.map((t: string) => {
+      if (t === 'training') return '🎓 entrenamiento'
+      if (t === 'nutrition') return '🥩 nutrición'
+      if (t === 'wellness') return '🧘 bienestar'
+      return t
+    })
+    summaryParts.push(typeEmojis.join(' y '))
+  }
+  
+  // Agregar problemas específicos
+  if (issues.length > 0) {
+    summaryParts.push(`para ${issues.join(' y ')}`)
+  }
+  
+  // Construir resumen final
+  if (summaryParts.length > 0) {
+    return `🔍 Recomendaciones de ${summaryParts.join(' - ')}: ${totalRecommendations} resultados específicos encontrados.`
+  } else {
+    return `🎯 Recomendaciones generales de bienestar: ${totalRecommendations} opciones disponibles.`
+  }
 }
 
 function getDemoResponse(query: string) {

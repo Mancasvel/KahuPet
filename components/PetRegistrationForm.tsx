@@ -175,10 +175,13 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
     setIsLoading(true)
     try {
       const petData = {
-        ...formData,
-        age: formData.age ? parseInt(formData.age) : null,
-        weight: formData.weight ? parseFloat(formData.weight) : null,
-        userId: 'anonymous'
+        nombre: formData.name,
+        tipo: formData.type,
+        raza: formData.breed,
+        edad: formData.age ? parseInt(formData.age) : null,
+        peso: formData.weight ? parseFloat(formData.weight) : null,
+        genero: formData.gender,
+        notas: formData.notes
       }
 
       let response
@@ -189,6 +192,7 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
         response = await fetch(`/api/user-pets?petId=${existingPet._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(petData)
         })
         successMessage = 'Mascota actualizada exitosamente'
@@ -197,6 +201,7 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
         response = await fetch('/api/user-pets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(petData)
         })
         successMessage = 'Mascota registrada exitosamente'
@@ -209,7 +214,11 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
         console.log(successMessage)
       } else {
         const error = await response.json()
-        alert(`Error: ${error.error}`)
+        if (response.status === 401) {
+          alert('Debes iniciar sesión para registrar mascotas')
+        } else {
+          alert(`Error: ${error.error}`)
+        }
       }
     } catch (error) {
       console.error('Error con la mascota:', error)
@@ -251,8 +260,8 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
               onChange={(e) => setFormData({...formData, type: e.target.value})}
               isRequired
             >
-              <SelectItem key="perro" value="perro">🐕 Perro</SelectItem>
-              <SelectItem key="gato" value="gato">🐱 Gato</SelectItem>
+              <SelectItem key="perro">🐕 Perro</SelectItem>
+              <SelectItem key="gato">🐱 Gato</SelectItem>
             </Select>
 
             {formData.type && (
@@ -264,7 +273,7 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
                 isRequired
               >
                 {breeds.map((breed) => (
-                  <SelectItem key={breed} value={breed}>{breed}</SelectItem>
+                  <SelectItem key={breed}>{breed}</SelectItem>
                 ))}
               </Select>
             )}
@@ -294,8 +303,8 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
               selectedKeys={formData.gender ? [formData.gender] : []}
               onChange={(e) => setFormData({...formData, gender: e.target.value})}
             >
-              <SelectItem key="macho" value="macho">♂️ Macho</SelectItem>
-              <SelectItem key="hembra" value="hembra">♀️ Hembra</SelectItem>
+              <SelectItem key="macho">♂️ Macho</SelectItem>
+              <SelectItem key="hembra">♀️ Hembra</SelectItem>
             </Select>
 
             <Textarea
