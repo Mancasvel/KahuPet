@@ -11,7 +11,10 @@ import {
   Input, 
   Select, 
   SelectItem,
-  Textarea
+  Textarea,
+  Card,
+  CardBody,
+  Divider
 } from '@heroui/react'
 
 interface PetRegistrationFormProps {
@@ -37,13 +40,13 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
   useEffect(() => {
     if (existingPet && isOpen) {
       setFormData({
-        name: existingPet.name || '',
-        type: existingPet.type || '',
-        breed: existingPet.breed || '',
-        age: existingPet.age ? existingPet.age.toString() : '',
-        weight: existingPet.weight ? existingPet.weight.toString() : '',
-        gender: existingPet.gender || '',
-        notes: existingPet.notes || ''
+        name: existingPet.nombre || '',
+        type: existingPet.tipo || '',
+        breed: existingPet.raza || '',
+        age: existingPet.edad ? existingPet.edad.toString() : '',
+        weight: existingPet.peso ? existingPet.peso.toString() : '',
+        gender: existingPet.genero || '',
+        notes: existingPet.notas || ''
       })
     } else if (!existingPet && isOpen) {
       // Limpiar formulario para nuevo registro
@@ -231,104 +234,184 @@ export default function PetRegistrationForm({ isOpen, onClose, onSuccess, existi
   const breeds = formData.type === 'perro' ? dogBreeds : catBreeds
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" scrollBehavior="inside">
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose} 
+      size="2xl"
+      backdrop="blur"
+      scrollBehavior="inside"
+      classNames={{
+        backdrop: "bg-gradient-to-t from-zinc-900 to-zinc-900/10 backdrop-opacity-20",
+        base: "border border-gray-200 mx-2 my-2 sm:mx-6 sm:my-16",
+        header: "border-b-[1px] border-gray-200",
+        body: "py-4",
+        footer: "border-t-[1px] border-gray-200"
+      }}
+    >
       <ModalContent>
-        <ModalHeader>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🐾</span>
-            <h2 className="text-xl font-bold text-blue-600">
-              {existingPet ? 'Editar mascota' : 'Registra tu mascota'}
-            </h2>
+        <ModalHeader className="flex flex-col gap-1">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="text-3xl">🐾</span>
+              <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {existingPet ? 'Editar mascota' : 'Registra tu mascota'}
+              </h2>
+            </div>
+            <p className="text-sm text-gray-500">
+              {existingPet ? 'Actualiza los datos de tu compañero' : 'Cuéntanos sobre tu nuevo compañero'}
+            </p>
           </div>
         </ModalHeader>
         
         <ModalBody>
-          <div className="space-y-4">
-            <Input
-              label="Nombre de tu mascota"
-              placeholder="Ej: Max, Luna, Rocky..."
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              isRequired
-              startContent={<span>🏷️</span>}
-            />
-            
-            <Select
-              label="Tipo de mascota"
-              placeholder="Selecciona el tipo"
-              selectedKeys={formData.type ? [formData.type] : []}
-              onChange={(e) => setFormData({...formData, type: e.target.value})}
-              isRequired
-            >
-              <SelectItem key="perro">🐕 Perro</SelectItem>
-              <SelectItem key="gato">🐱 Gato</SelectItem>
-            </Select>
+          <Card className="w-full max-w-2xl mx-auto border-0 shadow-none">
+            <CardBody className="px-1 sm:px-6 py-2">
+              <div className="space-y-4 sm:space-y-6">
+                {/* Información básica */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                    <span>📋</span>
+                    Información básica
+                  </h3>
+                  
+                  <Input
+                    label="Nombre de tu mascota"
+                    placeholder="Ej: Max, Luna, Rocky..."
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    isRequired
+                    startContent={<span className="text-default-400">🏷️</span>}
+                    variant="bordered"
+                    size="lg"
+                    className="w-full"
+                  />
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Select
+                      label="Tipo de mascota"
+                      placeholder="Selecciona el tipo"
+                      selectedKeys={formData.type ? [formData.type] : []}
+                      onChange={(e) => setFormData({...formData, type: e.target.value, breed: ''})}
+                      isRequired
+                      variant="bordered"
+                      size="lg"
+                    >
+                      <SelectItem key="perro" startContent="🐕">Perro</SelectItem>
+                      <SelectItem key="gato" startContent="🐱">Gato</SelectItem>
+                    </Select>
 
-            {formData.type && (
-              <Select
-                label="Raza"
-                placeholder="Selecciona la raza"
-                selectedKeys={formData.breed ? [formData.breed] : []}
-                onChange={(e) => setFormData({...formData, breed: e.target.value})}
-                isRequired
-              >
-                {breeds.map((breed) => (
-                  <SelectItem key={breed}>{breed}</SelectItem>
-                ))}
-              </Select>
-            )}
+                    {formData.type && (
+                      <Select
+                        label="Raza"
+                        placeholder="Selecciona la raza"
+                        selectedKeys={formData.breed ? [formData.breed] : []}
+                        onChange={(e) => setFormData({...formData, breed: e.target.value})}
+                        isRequired
+                        variant="bordered"
+                        size="lg"
+                      >
+                        {breeds.map((breed) => (
+                          <SelectItem key={breed}>{breed}</SelectItem>
+                        ))}
+                      </Select>
+                    )}
+                  </div>
+                </div>
 
-            <div className="flex gap-4">
-              <Input
-                type="number"
-                label="Edad"
-                placeholder="En años"
-                value={formData.age}
-                onChange={(e) => setFormData({...formData, age: e.target.value})}
-                startContent={<span>🎂</span>}
-              />
-              <Input
-                type="number"
-                label="Peso"
-                placeholder="En kg"
-                value={formData.weight}
-                onChange={(e) => setFormData({...formData, weight: e.target.value})}
-                startContent={<span>⚖️</span>}
-              />
-            </div>
+                <Divider />
 
-            <Select
-              label="Género"
-              placeholder="Selecciona el género"
-              selectedKeys={formData.gender ? [formData.gender] : []}
-              onChange={(e) => setFormData({...formData, gender: e.target.value})}
-            >
-              <SelectItem key="macho">♂️ Macho</SelectItem>
-              <SelectItem key="hembra">♀️ Hembra</SelectItem>
-            </Select>
+                {/* Características físicas */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                    <span>📏</span>
+                    Características físicas
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <Input
+                      type="number"
+                      label="Edad"
+                      placeholder="En años"
+                      value={formData.age}
+                      onChange={(e) => setFormData({...formData, age: e.target.value})}
+                      startContent={<span className="text-default-400">🎂</span>}
+                      variant="bordered"
+                      size="lg"
+                    />
+                    <Input
+                      type="number"
+                      label="Peso"
+                      placeholder="En kg"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({...formData, weight: e.target.value})}
+                      startContent={<span className="text-default-400">⚖️</span>}
+                      variant="bordered"
+                      size="lg"
+                    />
+                    <Select
+                      label="Género"
+                      placeholder="Selecciona"
+                      selectedKeys={formData.gender ? [formData.gender] : []}
+                      onChange={(e) => setFormData({...formData, gender: e.target.value})}
+                      variant="bordered"
+                      size="lg"
+                    >
+                      <SelectItem key="macho" startContent="♂️">Macho</SelectItem>
+                      <SelectItem key="hembra" startContent="♀️">Hembra</SelectItem>
+                    </Select>
+                  </div>
+                </div>
 
-            <Textarea
-              label="Notas adicionales"
-              placeholder="Cuéntanos sobre la personalidad, problemas de salud, comportamiento especial, etc."
-              value={formData.notes}
-              onChange={(e) => setFormData({...formData, notes: e.target.value})}
-              minRows={3}
-            />
-          </div>
+                <Divider />
+
+                {/* Información adicional */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                    <span>💭</span>
+                    Información adicional
+                  </h3>
+                  
+                  <Textarea
+                    label="Notas sobre tu mascota"
+                    placeholder="Cuéntanos sobre la personalidad, problemas de salud, comportamiento especial, alergias, etc."
+                    value={formData.notes}
+                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                    minRows={3}
+                    maxRows={6}
+                    variant="bordered"
+                    size="lg"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </CardBody>
+          </Card>
         </ModalBody>
         
-        <ModalFooter>
-          <Button variant="light" onPress={onClose}>
-            Cancelar
-          </Button>
-          <Button 
-            color="primary" 
-            onPress={handleSubmit} 
-            isLoading={isLoading}
-            isDisabled={!formData.name || !formData.type || !formData.breed}
-          >
-            {existingPet ? 'Actualizar mascota' : 'Registrar mascota'}
-          </Button>
+        <ModalFooter className="justify-center sm:justify-end">
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <Button 
+              variant="light" 
+              onPress={onClose}
+              size="lg"
+              className="w-full sm:w-auto order-2 sm:order-1"
+            >
+              Cancelar
+            </Button>
+            <Button 
+              color="primary" 
+              onPress={handleSubmit} 
+              isLoading={isLoading}
+              isDisabled={!formData.name || !formData.type || !formData.breed}
+              size="lg"
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 order-1 sm:order-2"
+            >
+              {isLoading 
+                ? (existingPet ? 'Actualizando...' : 'Registrando...') 
+                : (existingPet ? 'Actualizar mascota' : 'Registrar mascota')
+              }
+            </Button>
+          </div>
         </ModalFooter>
       </ModalContent>
     </Modal>
