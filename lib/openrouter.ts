@@ -192,7 +192,7 @@ IMPORTANTE:
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: "nvidia/llama-3.3-nemotron-super-49b-v1:free",
+        model: "anthropic/claude-sonnet-4",
         messages: [
           {
             role: "system",
